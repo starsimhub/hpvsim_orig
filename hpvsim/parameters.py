@@ -87,7 +87,7 @@ def make_pars(version=None, nonactive_by_age=False, set_prognoses=False, **kwarg
     pars['n_genotypes'] = 1 # The number of genotypes circulating in the population
 
     # Duration parameters
-    pars['dur'] = {}
+    pars['dur'] = {} # TODO make these genotype specific (yikes!)
     pars['dur']['inf']  = dict(dist='lognormal', par1=2.0, par2=1.0)  # Duration of infection in YEARS
     pars['dur']['cin1']  = dict(dist='lognormal', par1=2.0, par2=1.0)  # Duration of CIN1 in YEARS
     pars['dur']['cin2'] = dict(dist='lognormal', par1=3.0, par2=1.0)  # Duration of CIN2 in YEARS
