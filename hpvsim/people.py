@@ -504,9 +504,9 @@ class People(hpb.BasePeople):
             cin1_inds   = inds[is_cin1]
 
             # For those who progress to CIN1, determine how long this takes
-            durs_hpv2cin1 = hpu.sample(**durpars['hpv_post_cin1'], size=len(cin1_inds))  # Store how long this person took to develop CIN1
-            self.dur_hpv2cin1[g, cin1_inds]  = durs_hpv2cin1 # Store the the length of post-CIN1 HPV persistance
-            dur_inf[hpu.true(is_cin1)]      += durs_hpv2cin1 # Add post-CIN1 HPV persistance time to the overall duration of infection
+            durs_hpv2cin1 = hpu.sample(**durpars['hpv_pre_cin1'], size=len(cin1_inds))  # Store how long this person took to develop CIN1
+            durs_hpv2cin1 = np.where(durs_hpv2cin1 > dur_inf[hpu.true(is_cin1)], dur_inf[hpu.true(is_cin1)], durs_hpv2cin1)
+            self.dur_hpv2cin1[g, cin1_inds]  = durs_hpv2cin1 # Store the the length of HPV infection prior to CIN1 development
 
             # Determine date of CIN1 onset
             excl_inds = hpu.true(self.date_cin1[g, cin1_inds] < self.t) # Don't count CIN1s that were acquired before now
