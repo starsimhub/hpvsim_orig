@@ -570,7 +570,7 @@ class People(hpb.BasePeople):
             self.date_clearance[g, cin3_inds] = np.fmax(self.date_clearance[g, cin3_inds],self.date_cin3[g, cin3_inds] + np.ceil(dur_cin3 / dt))  # HPV is cleared
             self.dur_hpv[g, cin3_inds] += dur_cin3  # Duration of HPV is the sum of the period without dysplasia and the period with CIN
 
-            # Case 2.2.2.1: Severe dysplasia regresses
+            # Case 2.2.2.1: Severe dysplasia progresses
             self.dur_cin2cancer[g, cancer_inds] = dur_cin3[is_cancer]
             excl_inds = hpu.true(self.date_cancerous[g, cancer_inds] < self.t) # Don't count cancers that were acquired before now
             self.date_cancerous[g, cancer_inds[excl_inds]] = np.nan
