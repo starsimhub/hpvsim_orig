@@ -97,7 +97,10 @@ def make_pars(version=None, nonactive_by_age=False, set_prognoses=False, **kwarg
     pars['dur']['cancer']   = dict(dist='lognormal', par1=6.0, par2=3.0)  # Duration of untreated cancer
 
     # Efficacy of protection
-    pars['eff_condoms']     = 0.8  # The efficacy of condoms; assumption; TODO replace with data
+    pars['eff_condoms']     = 0.7  # The efficacy of condoms; assumption; assuming 100% condom use
+                                   #https://www.nejm.org/doi/10.1056/NEJMoa053284?url_ver=Z39.88-2003&rfr_id=ori:rid:crossref.org&rfr_dat=cr_pub%20%200www.ncbi.nlm.nih.gov
+
+                                    # TODO replace with data
 
     # Events and interventions
     pars['interventions'] = []   # The interventions present in this simulation; populated by the user
