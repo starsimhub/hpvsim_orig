@@ -196,7 +196,7 @@ class MarkovSim:                            # Simulation to let the event-driven
                     self.infected_cells_indices(new_p)
             # Need to account for cell death and shedding here, only pull from V_P_diff vector
 
-
+            # TODO: Dying cells, shedding cells
             self.current_time += tau
 
 
@@ -213,7 +213,7 @@ class Cell:
         self.split_rate = split_rate
         self.death_rate = death_rate
 
-    def update_split(self, new_rate):
+    def update_split(self, new_rate): # E6/E7 expressions
         self.split_rate = new_rate
 
     def update_death(self, new_death):
