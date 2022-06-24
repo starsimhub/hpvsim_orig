@@ -80,23 +80,26 @@ def draw_event(max_rate, event_list):                       # out of the event l
 
 
 
-class MarkovSim:                            # Simulation to let the event-driven stochastic process occur
-    def __init__(self, time, Lambda, theta, size):
-        self.indices = list(range(1, 100))  # number of cells in the system
-        self.time = time                    # total time of simulation
-        self.current_time = 0               # current time in simulation
-        self.Lambda = Lambda                # TODO: decide on parameter values for rates
+class MarkovSim:                                    # Simulation to let the event-driven stochastic process occur
+    def __init__(self, time, Lambda, theta):
+        self.indices = list(range(1, 100))          # number of cells in the system
+        self.time = time                            # total time of simulation
+        self.current_time = 0                       # current time in simulation
+        self.Lambda = Lambda                        # TODO: decide on parameter values for rates
         self.theta = theta
-        self.V_B = []                       # vec of basal cells (objects)
-        self.V_B_ind = []                   # vec of basal cell indices
-        self.V_P_non_diff = []              # vec of parabasal cells that are not differentiating
-        self.V_P_non_diff_ind = []          # vec of indices of above
-        self.V_P_diff = []                  # vec of parabasal cells that have potential to divide
-        self.V_P_diff_ind = []              # indices of potential dividing parabasal cells
-        self.vl_time = np.zeros(time)       # measured in weeks?  TODO: determine a time interval
-        self.infected_cells = []            # vector for infected cells
-        self.infected_cells_indices = []    # indices of infected cells
-        self.num_infected_t = []            # counter for the cells infected at each time point
+        self.V_B = []                               # vec of basal cells (objects)
+        self.V_B_ind = []                           # vec of basal cell indices
+        self.V_P_non_diff = []                      # vec of parabasal cells that are not differentiating
+        self.V_P_non_diff_ind = []                  # vec of indices of above
+        self.V_P_non_diff_infect = []               # vec of parabasal cells that are not differentiating and infected
+        self.V_P_non_diff_infect_ind = []           # vec of indices of above
+        self.V_P_diff = []                          # vec of parabasal cells that have potential to divide
+        self.V_P_diff_ind = []                      # indices of potential dividing parabasal cells
+        self.vl_time = np.zeros(time)               # measured in weeks?  TODO: determine a time interval
+        self.infected_cells = []                    # vector for infected cells
+        self.infected_cells_indices = []            # indices of infected cells
+        self.num_infected_t = np.zeros(self.time)   # counter for the cells infected at each time point
+        self.shed_amount_t =  np.zeros(self.time)   # counter for the amount of viral load shed at each time point
 
     def initialize(self):
         cell_zero_idx = random.randint(0, len(size)-1)
@@ -125,6 +128,8 @@ class MarkovSim:                            # Simulation to let the event-driven
                 self.V_P_non_diff_ind.remove(diff_event.index)
 
 
+
+
             if event_class == 2:
                 # Infect a basal cell
                 infect_event = draw_event(np.max(self.Lambda), self.V_B)
@@ -134,7 +139,7 @@ class MarkovSim:                            # Simulation to let the event-driven
 
             if event_class == 3:
                 # Make two new parabasal cells from parabasal cell
-                pbasal_pp_event = draw_event(np.max(self.Lambda), self.V_P_non_diff)
+                pbasal_pp_event = draw_event(np.max(self.Lambda), self.V_P_non_diff_infect)
                 new_p1, current = pbasal_pp_event.split(index_1)
 
                 #Bookkeeping and updating the lists of cells
@@ -145,12 +150,16 @@ class MarkovSim:                            # Simulation to let the event-driven
                 #Bookkeeping the infection
                 if isinstance(new_p1, Infected_Parabasal_Cell):
                     self.infected_cells.append(new_p1)
-                    self.infected_cells_indices(new_p1.index)
+                    self.infected_cells_indices.append(new_p1.index)
+                    if new_p1.state == 0:
+                        self.V_P_non_diff_infect.append(new_p1)
+                        self.V_P_non_diff_infect_ind.append(new_p1.index)
+
 
             if event_class == 4:
                 # Make two new parabasal cells from basal cell
                 basal_pp_event = draw_event(np.max(self.Lambda), self.V_B)
-                new_p1, new_p2 = basal_pp_event.split(2, index_1, index_2, self.current_time)
+                new_p1, new_p2 = basal_pp_event.split(4, index_1, index_2, self.current_time)
 
                 #Bookkeeping and updating the lists of cells
                 self.V_P_non_diff.extend((new_p1, new_p2))
@@ -161,14 +170,17 @@ class MarkovSim:                            # Simulation to let the event-driven
                 self.indices.append(basal_pp_event.index)
 
                 # Bookkeeping the infection
-                if isinstance(new_p1, Infected_Basal_Cell):
-                    self.infected_cells.append(new_b1)
-                    self.infected_cells_indices(new_b1.index)
+                if isinstance(new_p1, Infected_Parabasal_Cell):
+                    self.infected_cells.append(new_p1)
+                    self.infected_cells_indices.append(new_p1.index)
+                    if new_p1.state == 0:
+                        self.V_P_non_diff_infect.extend((new_p1, new_p2))
+                        self.V_P_non_diff_infect_ind.extend((new_p1.index,new_p2.index))
 
             if event_class == 5:
                 # Make two new basal cells from basal cell
                 basal_bb_event = draw_event(np.max(self.Lambda), self.V_B)
-                new_b1, current = basal_bb_event.split(2, index_1, basal_bb_event.index, self.current_time)
+                new_b1, current = basal_bb_event.split(5, index_1, basal_bb_event.index, self.current_time)
 
                 # Bookkeeping and updating the lists of cells
                 self.V_B.append(new_b1)
@@ -178,25 +190,36 @@ class MarkovSim:                            # Simulation to let the event-driven
                 # Bookkeeping the infection
                 if isinstance(new_b1, Infected_Basal_Cell):
                     self.infected_cells.append(new_b1)
-                    self.infected_cells_indices(new_b1.index)
+                    self.infected_cells_indices.append(new_b1.index)
 
             if event_class == 6:
                 # Make a basal and a parabasal cell from basal cell
                 basal_pb_event = draw_event(np.max(self.Lambda), self.V_B)
-                new_p, current = basal_pb_event.split(3, index_1, basal_pb_event.index, self.current_time)
+                new_p, current = basal_pb_event.split(6, index_1, basal_pb_event.index, self.current_time)
 
                 # Bookkeeping and updating the lists of  cells
-                self.V_P.append(new_p)
-                self.V_P_ind.append(new_p.index)
+                self.V_P_non_diff.append(new_p)
+                self.V_P_non_diff_ind.append(new_p.index)
                 self.indices.remove(new_p.index)
 
                 # Bookkeeping the infection
                 if isinstance(new_p, Infected_Parabasal_Cell):
                     self.infected_cells.append(new_p)
-                    self.infected_cells_indices(new_p)
-            # Need to account for cell death and shedding here, only pull from V_P_diff vector
+                    self.infected_cells_indices.append(new_p)
+                    if new_p.state == 0:
+                        self.V_P_non_diff_infect.append(new_p)
+                        self.V_P_non_diff_infect_ind.append(new_p.index)
+
 
             # TODO: Dying cells, shedding cells
+            for i in range(tau):
+                return 0
+
+
+
+
+
+
             self.current_time += tau
 
 
@@ -231,25 +254,25 @@ class Basal_Cell(Cell):
         super().__init__(index, split_rate, death_rate)
         self.cell = cell
 
-    def split(self, event_type, index_1, index_2):
+    def split(self, event_type, index_1, index_2, time):
         # Make the extra cell, default parabasal cell which is infected
-        if event_type == 1: # two parabasal cells
-            split_1 = Parabasal_Cell(index_1, self.split_rate, self.death_rate, self)
-            split_2 = Parabasal_Cell(index_2, self.split_rate, self.death_rate, self)
+        if event_type == 4: # two parabasal cells
+            split_1 = Parabasal_Cell(index_1, self.split_rate, self.death_rate, self, time)
+            split_2 = Parabasal_Cell(index_2, self.split_rate, self.death_rate, , time)
 
             if isinstance(self, Infected_Basal_Cell):
-                split_1 = Infected_Parabasal_Cell(self.genotype, self.vl, self)
+                split_1 = Infected_Parabasal_Cell(self.genotype, self.vl, self, time)
                 split_2 = Infected_Parabasal_Cell(self.genotype, self.vl, self)
 
-        if event_type == 2: # two new basal cells
-            split_1 = Basal_Cell(index_1, self.split_rate, self.death_rate, self)
+        if event_type == 5: # two new basal cells
+            split_1 = Basal_Cell(index_1, self.split_rate, self.death_rate, self, time)
             split_2 = self
 
             if isinstance(self, Infected_Basal_Cell):
                 split_1 = Infected_Basal_Cell(self.genotype, self.vl, self)
 
-        if event_type == 3: # one basal, one parabasal
-            split_1 = Parabasal_Cell(index_1, self.split_rate, self.death_rate, self)
+        if event_type == 6: # one basal, one parabasal
+            split_1 = Parabasal_Cell(index_1, self.split_rate, self.death_rate, self, time)
             split_2 = self
 
             if isinstance(self, Infected_Basal_Cell):
@@ -265,24 +288,18 @@ class Parabasal_Cell(Cell):
     # cell: cell that made it (and all it attributes)
 
 
-    def __init__(self, index, split_rate, death_rate, cell):
+    def __init__(self, index, split_rate, death_rate, cell, time):
         super().__init__(index, split_rate, death_rate)
         self.state = 0
         self.cell = cell
+        self.death_time = time+3
 
     def differentiate(self):
         self.state = 1
 
+    def die(self):
+        self.state = 99
 
-    def split(self, index_1):
-        # Make the extra cell
-        split_1 = Parabasal_Cell(index_1, 0, self)
-        split_2 = self
-
-        if isinstance(self, Infected_Parabasal_Cell):
-            split_1 = Infected_Parabasal_Cell(self.genotype, self.vl, self)
-
-        return split_1, split_2
 
 
 
@@ -308,11 +325,22 @@ class Infected_Parabasal_Cell(Parabasal_Cell):
     # cell: the cell that has just become infected
     # genotype: the genotype of the virus in the system
     # vl: viral load of the cell
+    # shed_time: time that the cell sheds it viral load
 
     def __init__(self, genotype, vl, cell):
         super().__init__(cell.index, cell.split_rate, cell.death_rate, cell.state, cell)
         self.genotype = genotype
         self.vl = vl
+
+    def split(self, index_1):
+        # Make the extra infected cell
+        split_1 = Parabasal_Cell(index_1, 0, self)
+        split_2 = self
+
+        if isinstance(self, Infected_Parabasal_Cell):
+            split_1 = Infected_Parabasal_Cell(self.genotype, self.vl, self)
+
+        return split_1, split_2
 
     def update_vl(self):
         self.vl = 1000
