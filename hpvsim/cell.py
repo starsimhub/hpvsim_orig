@@ -98,7 +98,8 @@ class MarkovSim:                                    # Simulation to let the even
         self.vl_time = np.zeros(time)               # measured in weeks?  TODO: determine a time interval
         self.infected_cells = []                    # vector for infected cells
         self.infected_cells_indices = []            # indices of infected cells
-        self.num_infected_t = np.zeros(self.time)   # counter for the cells infected at each time point
+        self.num_infected_t = np.zeros(self.time)   # counter for the cells infected at each time point TODO: change this as cells are infected
+        self.deaths = []                            # times at which a differentiated cell will shed and die
         self.shed_amount_t =  np.zeros(self.time)   # counter for the amount of viral load shed at each time point
 
     def initialize(self):
@@ -122,10 +123,13 @@ class MarkovSim:                                    # Simulation to let the even
                 # Differentiating a parabasal cell
                 diff_event = draw_event(np.max(self.Lambda), self.V_P_non_diff)
                 diff_event.differentiate()
+
+                # Bookkeeping for differentiating parabasal cells
                 self.V_P_diff.append(diff_event)
                 self.V_P_diff_ind.append(diff_event.index)
                 self.V_P_non_diff.remove(diff_event)
                 self.V_P_non_diff_ind.remove(diff_event.index)
+                self.deaths.append(diff_event.death_time)           # appends a time when the cells die
 
 
 
@@ -211,16 +215,29 @@ class MarkovSim:                                    # Simulation to let the even
                         self.V_P_non_diff_infect_ind.append(new_p.index)
 
 
-            # TODO: Dying cells, shedding cells
+
             for i in range(tau):
-                return 0
+                if (self.current_time == self.deaths[0]):
+                    self.deaths.pop(0)
+                    if isinstance(self.V_P_diff[0], Infected_Parabasal_Cell):
+                        self.shed_amount_t[self.current_time] += self.V_P_diff[0].shed()
+                        self.shed_amount_t[self.current_time + 1] += self.V_P_diff[0].shed()/2
+                        self.shed_amount_t[self.current_time + 2] += self.V_P_diff[0].shed()/4
+
+                    self.V_P_diff[0].die()
+
+                self.current_time += 1
 
 
 
 
 
 
-            self.current_time += tau
+
+
+
+
+
 
 
     #Set up a plotting tool for the VL
@@ -284,7 +301,7 @@ class Basal_Cell(Cell):
 
 class Parabasal_Cell(Cell):
     # index: index of the parabasal cell
-    # state: 0-dividing, 1-differentiating
+    # state: 0-dividing, 1-differentiating, 99-dead
     # cell: cell that made it (and all it attributes)
 
 
