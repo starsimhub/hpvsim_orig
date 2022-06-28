@@ -13,13 +13,40 @@ Allow for random viral load to be floating around and be in the system
 Normal cell division should happen, then allow there to be an infected section 
 '''
 
-#Event-driven
+'''
+Event driven functions
+
+Code that defines the functions that allow events to be drawn at varying time points over continuous time. 
+'''
 
 def draw_tau():
-    tau = random.expovariate(1.0)               # draws a random time interval
+    '''
+    Draws a random time interval
+
+    Args:
+        None
+
+    Returns:
+        tau (float):
+    '''
+    tau = random.expovariate(1.0)
     return tau
 
 def draw_event_class(V_B, V_P):
+    '''
+    Draws the type of event that will could happen, either cell splitting (basal cell to two new basal cells, two new parabasal cells, or a parabasal cell and a basal cell,
+    or parabasal cell to two new parabasal cells,
+    or parabasal cells differentiating,
+    or basal cell becoming infected )
+
+    Args:
+        V_B (list/basal cells): vector of basal cells
+        V_P (list/parabasal cells): vector of parabasal cells (have not differentiated yet)
+
+    Returns:
+        (int): event class value
+
+    '''
     basal_split_bb_rate = 0                     # draws the event class possibility
     basal_split_pp_rate = 0
     basal_split_bp_rate = 0
@@ -63,8 +90,22 @@ def draw_event_class(V_B, V_P):
         return 1                                                        # differentiation event
 
 
-def draw_event(max_rate, event_list):                       # out of the event list, random draw occurs of if that
-    accepted = False                                        # event will occur.
+def draw_event(max_rate, event_list):
+    '''
+    Draws the type of event that will could happen, either cell splitting (basal cell to two new basal cells, two new parabasal cells, or a parabasal cell and a basal cell,
+    or parabasal cell to two new parabasal cells,
+    or parabasal cells differentiating,
+    or basal cell becoming infected )
+
+    Args:
+        max_rate (float): largest rate in the vector
+        event_list (list/per event): vector of cells that could have an event accepted to happen
+
+    Returns:
+        cell (Cell): cell that has an event happening to it
+
+    '''
+    accepted = False
     random_event = None
     while not accepted:
         random_event = random.choice(event_list)
@@ -75,18 +116,34 @@ def draw_event(max_rate, event_list):                       # out of the event l
 
     return random_event
 
-
-###### Class declarations
-
-
-
+'''
+CLASS DECLARATIONS
+'''
 class MarkovSim:                                    # Simulation to let the event-driven stochastic process occur
-    def __init__(self, time, Lambda, theta):
-        self.indices = list(range(1, 100))          # number of cells in the system
+    '''
+    Simulation to let the event-driven stochastic cell cycle occur
+    Args:
+        time (int): total time the process will run
+        b_bb (double): rate informing symmetric split of basal cell to two new basal cells
+        b_pb (double): rate informing asymmetric split of basal cell to a basal cell and parabasal cell
+        b_pp (double): rate informing symmetric split of basal cell to two new parabasal cells
+        p_pp (double): rate informing symmetric split of parabasal cell to two new parabasal cells
+        diff (double): rate informing differentiation of parabasal cells
+        infect_cell (double): rate informing the infection of basal cells through microabrasions
+
+    '''
+
+    def __init__(self, time, b_bb, b_pb, b_pp, p_pp, diff, infect_cell):
+        self.indices = list(range(1, 1000))         # number of cells in the system
+        self.start_num_cells = list(range(1, 900))  # number of cells in the system at the start
         self.time = time                            # total time of simulation
-        self.current_time = 0                       # current time in simulation
-        self.Lambda = Lambda                        # TODO: decide on parameter values for rates
-        self.theta = theta
+        self.current_time = 0                       # current time in simulation; starts at 0
+        self.b_bb = b_bb                            # rate informing basal cell symmetric split to basal cells
+        self.b_pb = b_pb                            # rate informing basal cell asymmetric split
+        self.b_pp = b_pp                            # rate informing basal cell symmetric split to parabasal cells
+        self.p_pp = p_pp                            # rate informing parabasal cell symmetric split
+        self.diff = diff                            # rate informing differentiation
+        self.infect_cell = infect_cell              # rate informing infection
         self.V_B = []                               # vec of basal cells (objects)
         self.V_B_ind = []                           # vec of basal cell indices
         self.V_P_non_diff = []                      # vec of parabasal cells that are not differentiating
@@ -102,13 +159,23 @@ class MarkovSim:                                    # Simulation to let the even
         self.deaths = []                            # times at which a differentiated cell will shed and die
         self.shed_amount_t =  np.zeros(self.time)   # counter for the amount of viral load shed at each time point
 
-    def initialize(self):
-        cell_zero_idx = random.randint(0, len(size)-1)
-        self.V_B.append(Basal_Cell(cell_zero_idx, 1, 5) # TODO: change the rates, currently placeholders
-        self.V_B_ind.append(cell_zero_idx)
-        self.indices.remove(cell_zero_idx)
+    def initialize(self): # TODO: initialize 6% of cells to be basal, the rest parabasal and 75% of parabasal are diff
+        base_cells = []
+        for i in range(start_num_cells):
+            base_cells.append(Cell(i, 1,1))
+            if i < (.06 * len(self.indices)):
+                self.V_B.append(Basal_Cell(base_cells[i].index, base_cells[i].split_rate, base_cells[i].death_rate, base_cells[i]))
+            else:
+                if i > (0.705 * len(self.indices)):
+                    self.V_P_diff.append(Parabasal_Cell(base_cells[i].index, base_cells[i].split_rate, base_cells[i].death_rate, base_cells[i]))
+                else:
+                    self.V_P_non_diff.append(Parabasal_Cell(base_cells[i].index, base_cells[i].split_rate, base_cells[i].death_rate,
+                                       base_cells[i]))
 
-    def run_sim(self): #Function to run simulation of events
+    def run_sim(self):
+        '''
+        Runs one iteration of cell cycle and possible infection events
+        '''
         self.initialize()
         while self.current_time < self.time:
 
@@ -267,7 +334,7 @@ class Basal_Cell(Cell):
     # index: index of the basal cell
     # cell: cell that made it (and all its attributes)
 
-    def __init__(self, index, split_rate, death_rate, cell):
+    def __init__(self, index, split_rate, death_rate, cell = None):
         super().__init__(index, split_rate, death_rate)
         self.cell = cell
 
