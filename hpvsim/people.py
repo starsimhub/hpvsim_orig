@@ -125,9 +125,6 @@ class People(hpb.BasePeople):
             else:
                 self[key] = value
 
-        if 'death_age' in kwargs:
-            self.date_dead_other = ((self.death_age-self.age)/self.pars['dt']).astype(int)
-
         return
 
 
@@ -169,7 +166,6 @@ class People(hpb.BasePeople):
         self.increment_age()  # Let people age by one time step
 
         # Apply death rates from other causes
-        # other_deaths, deaths_female, deaths_male    = self.check_death()
         other_deaths, deaths_female, deaths_male    = self.apply_death_rates(year=year)
         self.demographic_flows['other_deaths']      += other_deaths
         self.flows_by_sex['other_deaths_by_sex'][0] += deaths_female
@@ -479,8 +475,7 @@ class People(hpb.BasePeople):
             'n_imm_sources': self.pars['n_imm_sources'],
             'n_partner_types': self.pars['n_partner_types']
         }
-        death_ages = hppop.get_death_ages(life_tables=self.pars['lx'], year=year, pop_size=new_births, age_bins=np.zeros(new_births, dtype=int), ages=np.zeros(new_births), sexes=sexes, dt=self['dt'])
-        new_people = People(pars=pars, uid=uids, age=np.zeros(new_births), sex=sexes, death_age=death_ages, debut=debuts, partners=partners, strict=False)
+        new_people = People(pars=pars, uid=uids, age=np.zeros(new_births), sex=sexes, debut=debuts, partners=partners, strict=False)
 
         return new_births, new_people
 
