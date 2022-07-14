@@ -169,7 +169,8 @@ class People(hpb.BasePeople):
         self.increment_age()  # Let people age by one time step
 
         # Apply death rates from other causes
-        other_deaths, deaths_female, deaths_male    = self.check_death()
+        # other_deaths, deaths_female, deaths_male    = self.check_death()
+        other_deaths, deaths_female, deaths_male    = self.apply_death_rates(year=year)
         self.demographic_flows['other_deaths']      += other_deaths
         self.flows_by_sex['other_deaths_by_sex'][0] += deaths_female
         self.flows_by_sex['other_deaths_by_sex'][1] += deaths_male
@@ -426,6 +427,42 @@ class People(hpb.BasePeople):
         hpimm.update_peak_immunity(self, cleared_inds, imm_pars=self.pars, imm_source=genotype)
 
         return
+
+
+    def apply_death_rates(self, year=None):
+        '''
+        Apply death rates to remove people from the population
+        NB people are not actually removed to avoid issues with indices
+        '''
+
+        # Get age-dependent death rates
+        death_pars = self.pars['death_rates']
+        all_years = np.array(list(death_pars.keys()))
+        base_year = all_years[0]
+        age_bins = death_pars[base_year]['m'][:,0]
+        age_inds = np.digitize(self.age, age_bins)-1
+        death_probs = np.full(len(self), np.nan, dtype=hpd.default_float)
+        mx = dict()
+
+        for sex in ['f','m']:
+            aa = np.array([death_pars[y][sex][:, 1] for y in all_years])
+            mx[sex] = np.array([sc.smoothinterp(year, all_years, aa[1, aind]) for aind in range(len(age_bins))])[:,0]
+
+        death_probs[self.f_inds] = mx['f'][age_inds[self.f_inds]]*self.dt
+        death_probs[self.m_inds] = mx['m'][age_inds[self.m_inds]]*self.dt
+        death_probs[self.age > 100] = 1 # Just remove anyone >100
+
+        # Get indices of people who die of other causes, removing anyone already dead
+        death_inds = hpu.true(hpu.binomial_arr(death_probs))
+        already_dead = self.dead_other[death_inds]
+        death_inds = death_inds[~already_dead]  # Unique indices in deaths that are not already dead
+        deaths_female = len(hpu.true(self.is_female[death_inds]))
+        deaths_male = len(hpu.true(self.is_male[death_inds]))
+        other_deaths = self.make_die(death_inds, cause='other') # Apply deaths
+
+        return other_deaths, deaths_female, deaths_male
+
+
 
 
     def add_births(self, year=None):

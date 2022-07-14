@@ -11,6 +11,7 @@ import re
 
 __all__ = ['get_country_aliases', 'map_entries', 'show_locations', 'get_age_distribution', 'get_death_rates']
 
+fp = '../data'
 
 def get_country_aliases():
     ''' Define aliases for countries with odd names in the data '''
@@ -183,8 +184,8 @@ def get_lx(location=None, by_sex=True, overall=False):
 
     # Load the raw data
     try:
-        df1 = sc.load('../hpvsim/data/lx.obj')
-        df2 = sc.load('../hpvsim/data/lx_proj.obj')
+        df1 = sc.load(f'{fp}/lx.obj')
+        df2 = sc.load(f'{fp}/lx_proj.obj')
     except ValueError as E:
         errormsg = f'Could not locate datafile with age-specific death rates by country. Please run data/get_death_data.py first.'
         raise ValueError(errormsg)
@@ -227,40 +228,34 @@ def get_death_rates(location=None, by_sex=True, overall=False):
     '''
     # Load the raw data
     try:
-        df = sc.load('../hpvsim/data/age_specific_death_rates.obj')
+        df1 = sc.load(f'{fp}/mx.obj')
+        df2 = sc.load(f'{fp}/mx_proj.obj')
     except ValueError as E:
         errormsg = f'Could not locate datafile with age-specific death rates by country. Please run data/get_death_data.py first.'
         raise ValueError(errormsg)
 
-    age_groups = df['dim.AGEGROUP'].unique()
-    df = df.set_index(['dim.COUNTRY', 'dim.SEX', 'dim.AGEGROUP'])
-    dd = df.groupby(level=0).apply(lambda df: df.xs(df.name).to_dict()).to_dict()
-    raw_death_rates = map_entries(dd, location)[location]['Value']
+    # Figure out how this location is referred to in the data frame
+    raw_df1 = map_entries(df1, location)[location]
+    raw_df2 = map_entries(df2, location)[location]
+    raw_df = pd.concat([raw_df1, raw_df2])
 
     sex_keys = []
-    if by_sex: sex_keys += ['Male', 'Female']
+    if by_sex: sex_keys += ['Male','Female']
     if overall: sex_keys += ['Both sexes']
-    sex_key_map = {'Male': 'm', 'Female': 'f', 'Both sexes': 'tot'}
+    sex_key_map = {'Male':'m', 'Female':'f', 'Both sexes': 'tot'}
 
     max_age = 99
+    age_groups = raw_df['AgeGrpStart'].unique()
+    years = raw_df['Time'].unique()
     result = dict()
 
     # Processing
-    for sk in sex_keys:
-        sk_out = sex_key_map[sk]
-        result[sk_out] = []
-        for age in age_groups:
-            this_death_rate = float(raw_death_rates[(sk, age)])
-            if age[2] == '+':
-                val = [int(age[:2]), max_age, this_death_rate]
-            elif age[0] == '<':
-                val = [0, int(age[1]), this_death_rate]
-            else:
-                ages = re.split('-', age[:-6])  # Remove the 'years' part of the string
-                val = [int(ages[0]), int(ages[1]), this_death_rate]
-            result[sk_out].append(val)
-        result[sk_out] = np.array(result[sk_out])
-        result[sk_out] = result[sk_out][result[sk_out][:, 0].argsort()]
+    for year in years:
+        result[year] = dict()
+        for sk in sex_keys:
+            sk_out = sex_key_map[sk]
+            result[year][sk_out] = np.array(raw_df[(raw_df['Time']==year) & (raw_df['Sex']== sk)][['AgeGrpStart','mx']])
+            result[year][sk_out] = result[year][sk_out][result[year][sk_out][:, 0].argsort()]
 
     return result
 
@@ -277,7 +272,7 @@ def get_birth_rates(location=None):
     '''
     # Load the raw data
     try:
-        birth_rate_data = sc.load('../hpvsim/data/birth_rates.obj')
+        birth_rate_data = sc.load(f'{fp}/birth_rates.obj')
     except ValueError as E:
         errormsg = f'Could not locate datafile with birth rates by country. Please run data/get_birth_data.py first.'
         raise ValueError(errormsg)

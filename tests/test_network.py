@@ -22,11 +22,11 @@ def test_network(do_plot=True):
 
     n_agents = 50e3
     pars = dict(pop_size=n_agents,
-                start=1970,
-                n_years=60,
-                burnin=30,
+                start=1990,
+                n_years=40,
+                burnin=10,
                 dt=0.5,
-                pop_scale=13.54e6/n_agents,
+                pop_scale=25.24e6/n_agents,
                 network='default',
                 debut = dict(f=dict(dist='normal', par1=15., par2=1),
                              m=dict(dist='normal', par1=16., par2=1))

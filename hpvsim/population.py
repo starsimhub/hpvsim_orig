@@ -202,7 +202,6 @@ def get_death_ages(life_tables=None, year=None, pop_size=None, age_bins=None, ag
             filter_inds = (age_bins == aind) * (sexes == sex_bools[sex])  # Set the death ages for people of this sex & age range
             death_ages[filter_inds] = np.maximum(these_death_ages, ages[filter_inds])  # Make sure people's death age is greater than their current age
 
-
     return death_ages
 
 
