@@ -280,7 +280,7 @@ def get_births_deaths(location=None, verbose=1, by_sex=True, overall=False, die=
             warnmsg = f'Could not load demographic data for requested location "{location}" ({str(E)}), using default'
             hpm.warn(warnmsg, die=die)
 
-    return birth_rates, lx
+    return birth_rates, death_rates, lx
 
 
 
