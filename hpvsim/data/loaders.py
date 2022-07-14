@@ -11,7 +11,7 @@ import re
 
 __all__ = ['get_country_aliases', 'map_entries', 'show_locations', 'get_age_distribution', 'get_death_rates']
 
-fp = '../hpvsim/data'
+fp = '../data'
 
 def get_country_aliases():
     ''' Define aliases for countries with odd names in the data '''
@@ -164,54 +164,6 @@ def get_age_distribution(location=None):
 
     if len(result) == 1:
         result = list(result.values())[0]
-
-    return result
-
-
-def get_lx(location=None, by_sex=True, overall=False):
-    '''
-    Load death rates for a given country or countries.
-
-    Args:
-        location (str or list): name of the country or countries to load the age distribution for
-        by_sex (bool): whether to rates by sex
-        overall (bool): whether to load total rate
-
-
-    Returns:
-        death_rates (dict): death rates by age and sex
-    '''
-
-    # Load the raw data
-    try:
-        df1 = sc.load(f'{fp}/lx.obj')
-        df2 = sc.load(f'{fp}/lx_proj.obj')
-    except ValueError as E:
-        errormsg = f'Could not locate datafile with age-specific death rates by country. Please run data/get_death_data.py first.'
-        raise ValueError(errormsg)
-
-    # Figure out how this location is referred to in the data frame
-    raw_df1 = map_entries(df1, location)[location]
-    raw_df2 = map_entries(df2, location)[location]
-    raw_df = pd.concat([raw_df1, raw_df2])
-
-    sex_keys = []
-    if by_sex: sex_keys += ['Male','Female']
-    if overall: sex_keys += ['Both sexes']
-    sex_key_map = {'Male':'m', 'Female':'f', 'Both sexes': 'tot'}
-
-    max_age = 99
-    age_groups = raw_df['AgeGrpStart'].unique()
-    years = raw_df['Time'].unique()
-    result = dict()
-
-    # Processing
-    for year in years:
-        result[year] = dict()
-        for sk in sex_keys:
-            sk_out = sex_key_map[sk]
-            result[year][sk_out] = np.array(raw_df[(raw_df['Time']==year) & (raw_df['Sex']== sk)][['AgeGrpStart','lx']])
-            result[year][sk_out] = result[year][sk_out][result[year][sk_out][:, 0].argsort()]
 
     return result
 
