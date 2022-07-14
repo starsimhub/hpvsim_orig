@@ -183,13 +183,16 @@ def get_lx(location=None, by_sex=True, overall=False):
 
     # Load the raw data
     try:
-        df = sc.load('../hpvsim/data/raw_lxd.obj')
+        df1 = sc.load('../hpvsim/data/lx.obj')
+        df2 = sc.load('../hpvsim/data/lx_proj.obj')
     except ValueError as E:
         errormsg = f'Could not locate datafile with age-specific death rates by country. Please run data/get_death_data.py first.'
         raise ValueError(errormsg)
 
     # Figure out how this location is referred to in the data frame
-    raw_df = map_entries(df, location)[location]
+    raw_df1 = map_entries(df1, location)[location]
+    raw_df2 = map_entries(df2, location)[location]
+    raw_df = pd.concat([raw_df1, raw_df2])
 
     sex_keys = []
     if by_sex: sex_keys += ['Male','Female']
