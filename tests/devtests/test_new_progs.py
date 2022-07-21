@@ -153,10 +153,10 @@ def make_fig1():
         rv = lognorm(sigma, 0, scale)
         ax[0,0].plot(x, rv.pdf(x), color=colors[g], lw=2, label=genotype_map[g].upper())
     ax[0,0].legend()
-    ax[0,0].set_xlabel("Pre-dysplasia/clearance duration")
+    ax[0,0].set_xlabel("Pre-dysplasia or clearance duration")
     ax[0,0].set_ylabel("")
     ax[0,0].grid()
-    ax[0,0].set_title("Distribution of infection durations\nprior to detectable dysplasia/control")
+    ax[0,0].set_title("Distribution of infection durations\nprior to detectable dysplasia or control")
 
 
     ###### Relationship between durations and probability of detectable dysplasia
@@ -165,7 +165,7 @@ def make_fig1():
     for g in range(ng):
         ax[0,1].plot(x, mean_peak_fn(x, genotype_pars[genotype_map[g]]['dysp_rate']), color=colors[g], lw=2)
     ax[0,1].plot(xx[:-1], yy[:-1], 'ko', label="Values from\nHarvard model")
-    ax[0,1].set_xlabel("Pre-dysplasia/clearance duration")
+    ax[0,1].set_xlabel("Pre-dysplasia or clearance duration")
     ax[0,1].set_ylabel("")
     ax[0,1].grid()
     ax[0,1].legend(fontsize=15, frameon=False)
@@ -178,10 +178,10 @@ def make_fig1():
         sigma, scale = lognorm_params(durpars[g]['dys']['par1'], durpars[g]['dys']['par2'])
         rv = lognorm(sigma, 0, scale)
         ax[0,2].plot(thisx, rv.pdf(thisx), color=colors[g], lw=2, label=genotype_map[g].upper())
-    ax[0,2].set_xlabel("Post-dysplasia duration")
+    ax[0,2].set_xlabel("Dysplasia duration")
     ax[0,2].set_ylabel("")
     ax[0,2].grid()
-    ax[0,2].set_title("Distribution of dysplasia durations\nprior to cancer/control")
+    ax[0,2].set_title("Distribution of dysplasia durations\nprior to cancer or control")
 
 
     ################################################################################
@@ -201,7 +201,7 @@ def make_fig1():
                 peaks = np.minimum(1, hpu.sample(dist='lognormal', par1=mean_peaks, par2=(1 - mean_peaks), size=n_samples))
                 ax[1,0].plot([year]*n_samples, peaks, color=colors[g], lw=0, marker='o', alpha=0.5)
 
-    ax[1,0].set_xlabel("Post-dysplasia duration")
+    ax[1,0].set_xlabel("Dysplasia duration")
     ax[1,0].set_ylabel("")
     ax[1,0].grid(axis='x')
     ax[1,0].set_title("Mean peak clinical severity")
