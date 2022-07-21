@@ -184,6 +184,7 @@ def make_fig1():
     ax[0,2].set_title("Distribution of dysplasia durations\nprior to cancer or control")
 
 
+
     ################################################################################
     # Post-dysplasia dynamics
     ################################################################################
