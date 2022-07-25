@@ -133,9 +133,9 @@ stock_names  = ['susceptible',  'infectious',   'with CIN1',    'with CIN2',    
 stock_colors = [pl.cm.Greens,   pl.cm.GnBu,     pl.cm.Oranges,  pl.cm.Oranges,  pl.cm.Oranges,  pl.cm.Oranges]
 
 # Cancer specific flows (not by genotype)
-cancer_flow_keys   = ['cancers',  'cancer_deaths', 'detected_cancers']
-cancer_flow_names  = ['cancers',  'cancer deaths', 'detected cancers']
-cancer_flow_colors = [pl.cm.GnBu, pl.cm.Oranges,    pl.cm.Reds]
+cancer_flow_keys   = ['cancers',  'cancer_deaths', 'detected_cancers', 'detected_cancer_deaths']
+cancer_flow_names  = ['cancers',  'cancer deaths', 'detected cancers', 'detected cancer deaths']
+cancer_flow_colors = [pl.cm.GnBu, pl.cm.Oranges,    pl.cm.Reds, pl.cm.Greens]
 
 # Incidence and prevalence. Strong overlap with stocks, but with slightly different naming conventions
 # All are stored (1) by genotype and (2) as the total across genotypes
@@ -302,7 +302,7 @@ def get_default_plots(which='default', kind='sim', sim=None):
                 'CINs and cancers per 100,000 women': [
                     'total_cin_incidence',
                     'cin_incidence',
-                    'total_cancer_incidence',
+                    'cancer_incidence',
                     ],
             })
 

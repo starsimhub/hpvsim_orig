@@ -584,6 +584,7 @@ class age_results(Analyzer):
             'cancer': ['date_cancerous', 'cancerous'],
             'detected_cancer': ['date_detected_cancer', 'detected_cancer'],
             'cancer_deaths': ['date_dead_cancer', 'dead_cancer'],
+            'detected_cancer_deaths': ['date_dead_cancer', 'dead_cancer']
         }
         attr1 = mapping[attr][0]  # Messy way of turning 'total cancers' into 'date_cancerous' and 'cancerous' etc
         attr2 = mapping[attr][1]  # As above
@@ -671,7 +672,10 @@ class age_results(Analyzer):
                 if result.replace('total_', '') in hpd.flow_keys or result in hpd.cancer_flow_keys or 'incidence' in result:
                     attr1, attr2 = self.convert_rname_flows(result)
                     if result[:5] == 'total' or 'cancer' in result:  # Results across all genotypes
-                        inds = ((sim.people[attr1] == sim.t) * (sim.people[attr2])).nonzero()
+                        if result == 'detected_cancer_deaths':
+                            inds = ((sim.people[attr1] == sim.t) * (sim.people[attr2]) * (sim.people['detected_cancer'])).nonzero()
+                        else:
+                            inds = ((sim.people[attr1] == sim.t) * (sim.people[attr2])).nonzero()
                         self.results[result][date] += np.histogram(age[inds[-1]], bins=result_dict.edges)[
                                                         0] * scale  # Bin the people
                     else:  # Results by genotype
@@ -959,7 +963,7 @@ class Calibration(Analyzer):
                 return output
 
 
-    def get_pars(self, pardict=None, trial=None):
+    def get_pars(self, pardict=None, trial=None, gname=None):
         ''' Sample from pars, after extracting them from the structure they're provided in '''
         pars={}
         for key, val in pardict.items():
@@ -973,7 +977,11 @@ class Calibration(Analyzer):
                         raise AttributeError(errormsg) from E
                 else:
                     sampler_fn = trial.suggest_uniform
-                pars[key] = sampler_fn(key, low, high)  # Sample from values within this range
+                if gname is not None:
+                    sampler_key = gname + '_' + key
+                else:
+                    sampler_key = key
+                pars[sampler_key] = sampler_fn(sampler_key, low, high)  # Sample from values within this range
             elif isinstance(val, dict):
                 sampler_fn = trial.suggest_uniform
                 pars[key] = dict()
@@ -992,7 +1000,7 @@ class Calibration(Analyzer):
         if self.genotype_pars is not None:
             genotype_pars = {}
             for gname, pardict in self.genotype_pars.items():
-                genotype_pars[gname] = self.get_pars(pardict, trial)
+                genotype_pars[gname] = self.get_pars(pardict, trial, gname=gname)
         else:
             genotype_pars = None
         if self.calib_pars is not None:
@@ -1121,8 +1129,9 @@ class Calibration(Analyzer):
             for gname, gpardict in self.genotype_pars.items():
                 for key, val in gpardict.items():
                     if isinstance(val, list):
-                        self.initial_pars[key] = val[0]
-                        self.par_bounds[key] = np.array([val[1], val[2]])
+                        sampler_key = gname + '_' + key
+                        self.initial_pars[sampler_key] = val[0]
+                        self.par_bounds[sampler_key] = np.array([val[1], val[2]])
                     elif isinstance(val, dict):
                         for parkey, par_highlowlist in val.items():
                             for i, (best, low, high) in enumerate(par_highlowlist):
@@ -1258,7 +1267,7 @@ class Calibration(Analyzer):
                                 for run_num, run in enumerate(self.analyzer_results):
                                     ymodel = run[resname][date][g]
                                     label = f'Model - {glabel}' if run_num==0 else None
-                                    ax.plot(x, ymodel, color=self.result_properties[resname].color[g], linestyle='--')
+                                    ax.plot(x, ymodel, color=self.result_properties[resname].color[g], linestyle='--', label=label)
 
                     else:
                         ydata = np.array(thisdatadf.value)
