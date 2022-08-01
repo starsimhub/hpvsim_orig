@@ -148,7 +148,6 @@ class People(hpb.BasePeople):
             # Add births
             new_births = self.add_births(year=year)
             self.demographic_flows['births'] = new_births
-            # self.addtoself(new_people) # New births are added to the population
 
         # Perform updates that are genotype-specific
         ng = self.pars['n_genotypes']
