@@ -284,14 +284,16 @@ def test_screening(do_plot=False, do_save=False, fig_path=None):
     screen_prop = .7
     compliance = .9
     cancer_compliance = 0.2
-    hpv_screening = hpv.Screening(primary_screen_test='hpv', treatment='via_triage', screen_start_age=30,
+    hpv_screening = hpv.Screening(primary_screen_test='hpv', screen_start_age=30,
                                   screen_stop_age=50, screen_interval=5, screen_start_year='2010',
-                                  screen_compliance=screen_prop, triage_compliance=compliance, cancer_compliance=cancer_compliance)
+                                  screen_compliance=screen_prop, triage_compliance=compliance, cancer_compliance=cancer_compliance
+                                  cancer_treatment=hpv.RadiationTherapy, ablation_treatment=hpv.AblativeTreatment, excision_treatment=hpv.ExcisionTreatment)
 
     screen_prop = [.015, .025, .05, .1, .2, .3, 0.4, .5, .6, .7]
-    hpv_screening_scaleup = hpv.Screening(primary_screen_test='hpv', treatment='via_triage', screen_start_age=30,
+    hpv_screening_scaleup = hpv.Screening(primary_screen_test='hpv', screen_start_age=30,
                                   screen_stop_age=50, screen_interval=10, screen_start_year='2010', label='hpv primary, via triage',
-                                  screen_compliance=screen_prop, triage_compliance=compliance, cancer_compliance=cancer_compliance)
+                                  screen_compliance=screen_prop, triage_compliance=compliance, cancer_compliance=cancer_compliance,
+                                  cancer_treatment=hpv.RadiationTherapy, ablation_treatment=hpv.AblativeTreatment, excision_treatment=hpv.ExcisionTreatment)
 
     # hpv_hpv1618_screening = hpv.Screening(primary_screen_test='hpv', triage_screen_test='hpv1618', treatment='via_triage',
     #                                     screen_start_age=30,screen_stop_age=50, screen_interval=10, screen_start_year='2010',

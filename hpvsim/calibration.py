@@ -232,7 +232,8 @@ class Calibration(sc.prettyobj):
         else:
             calib_pars = None
 
-        sim = self.run_sim(calib_pars, genotype_pars, return_sim=True)
+        with sc.Timer('run sim'):
+            sim = self.run_sim(calib_pars, genotype_pars, return_sim=True)
         # trial.set_user_attr('sim', sim) # CK: fails since not a JSON, could use sc.jsonpickle()
         # Extract results we are calibrating to, a combination of by-age and sim-results
         # First check for by-age results
