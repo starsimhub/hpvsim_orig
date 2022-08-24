@@ -87,7 +87,7 @@ class Calibration(sc.prettyobj):
         if keep_db   is None: keep_db   = False
         if storage   is None: storage   = f'sqlite:///{db_name}'
         if run_best  is None: run_best  = 50
-        if total_trials is not None: n_trials = total_trials/n_workers
+        if total_trials is not None: n_trials = int(np.ceil(total_trials/n_workers))
         self.run_args   = sc.objdict(n_trials=int(n_trials), n_workers=int(n_workers), name=name, db_name=db_name, keep_db=keep_db, storage=storage, rand_seed=rand_seed)
 
         # Handle other inputs
@@ -142,6 +142,9 @@ class Calibration(sc.prettyobj):
             self.result_properties[rkey] = sc.objdict()
             self.result_properties[rkey].name = self.sim.results[rkey].name
             self.result_properties[rkey].color = self.sim.results[rkey].color
+
+        # Temporarily store a filename
+        self.tmp_filename = 'tmp_calibration_%05i.obj'
 
         return
 
@@ -237,7 +240,7 @@ class Calibration(sc.prettyobj):
         return pars
 
 
-    def run_trial(self, trial):
+    def run_trial(self, trial, save=True):
         ''' Define the objective for Optuna '''
 
         if self.genotype_pars is not None:
@@ -263,6 +266,17 @@ class Calibration(sc.prettyobj):
             self.sim_results[rkey].mismatch = self.sim_results[rkey].losses.sum()
             sim.fit += self.sim_results[rkey].mismatch
             sim_results[rkey] = self.sim_results[rkey].model_output
+
+        # sim_results = sc.jsonify(sim_results)
+        # trial.set_user_attr('sim_results', sim_results)
+        # sim.shrink() # CK: Proof of principle only!!
+        # trial.set_user_attr('jsonpickle_sim', sc.jsonpickle(sim))
+
+        # Really kludgy way to store results
+        if save:
+            results = dict(sim=sim_results, analyzer=sim.get_analyzer().results)
+            filename = self.tmp_filename % trial.number
+            sc.save(filename, results)
 
         return sim.fit
 
@@ -322,7 +336,7 @@ class Calibration(sc.prettyobj):
         return output
 
 
-    def calibrate(self, calib_pars=None, genotype_pars=None, verbose=True, **kwargs):
+    def calibrate(self, calib_pars=None, genotype_pars=None, verbose=True, load=True, tidyup=True, **kwargs):
         '''
         Actually perform calibration.
 
@@ -350,12 +364,76 @@ class Calibration(sc.prettyobj):
         study = op.load_study(storage=self.run_args.storage, study_name=self.run_args.name)
         self.best_pars = sc.objdict(study.best_params)
         self.elapsed = sc.toc(t0, output=True)
+        self.study = study
 
         # Collect analyzer results
         # Load a single sim
         sim = self.sim # TODO: make sure this is OK #sc.jsonpickle(self.study.trials[0].user_attrs['jsonpickle_sim'])
         self.ng = sim['n_genotypes']
         self.glabels = [g.upper() for g in sim['genotype_map'].values()]
+
+        # Replace with something else, this is fragile
+        # self.analyzer_results = []
+        # self.sim_results = []
+        # for trial in self.study.trials:
+        #     r = trial.user_attrs['analyzer_results'] # CK: TODO: make more general
+        #     sim_results = trial.user_attrs['sim_results']
+        #     self.sim_results.append(sim_results)
+        #     self.analyzer_results.append(r)
+
+        # Replace with something else, this is fragile
+        self.analyzer_results = []
+        self.sim_results = []
+        if load:
+            print('Loading saved results...')
+            for trial in self.study.trials:
+                n = trial.number
+                try:
+                    filename = self.tmp_filename % trial.number
+                    results = sc.load(filename)
+                    self.sim_results.append(results['sim'])
+                    self.analyzer_results.append(results['analyzer'])
+                    if tidyup:
+                        try:
+                            os.remove(filename)
+                            print(f'    Removed temporary file {filename}')
+                        except Exception as E:
+                            errormsg = f'Could not remove {filename}: {str(E)}'
+                            print(errormsg)
+                    print(f'  Loaded trial {n}')
+                except Exception as E:
+                    errormsg = f'Warning, could not load trial {n}: {str(E)}'
+                    print(errormsg)
+
+        # Compare the results
+        self.initial_pars = sc.objdict()
+        self.par_bounds = sc.objdict()
+
+        # Compare for regular sim pars
+        if self.calib_pars is not None:
+            for key, val in self.calib_pars.items():
+                if isinstance(val, list):
+                    self.initial_pars[key] = val[0]
+                    self.par_bounds[key] = np.array([val[1], val[2]])
+                elif isinstance(val, dict):
+                    for parkey, par_highlowlist in val.items():
+                        sampler_key = key + '_' + parkey + '_'
+                        self.initial_pars[sampler_key] = par_highlowlist[0]
+                        self.par_bounds[sampler_key] = np.array([par_highlowlist[1], par_highlowlist[2]])
+
+        # Compare for genotype pars
+        if self.genotype_pars is not None:
+            for gname, gpardict in self.genotype_pars.items():
+                for key, val in gpardict.items():
+                    if isinstance(val, list):
+                        sampler_key = gname + '_' + key
+                        self.initial_pars[sampler_key] = val[0]
+                        self.par_bounds[sampler_key] = np.array([val[1], val[2]])
+                    elif isinstance(val, dict):
+                        for parkey, par_highlowlist in val.items():
+                            sampler_key = gname + '_' + key + '_' + parkey
+                            self.initial_pars[sampler_key] = par_highlowlist[0]
+                            self.par_bounds[sampler_key] = np.array([par_highlowlist[1], par_highlowlist[2]])
 
         self.initial_pars, self.par_bounds = self.sim_to_sample_pars()
         self.parse_study(study)
@@ -445,7 +523,7 @@ class Calibration(sc.prettyobj):
         return
 
 
-    def to_json(self, filename=None):
+    def to_json(self, filename=None, indent=2, **kwargs):
         '''
         Convert the data to JSON.
         '''
@@ -457,8 +535,9 @@ class Calibration(sc.prettyobj):
             for key,val in row.items():
                 rowdict['pars'][key] = val
             json.append(rowdict)
+        self.json = json
         if filename:
-            sc.savejson(filename, json, indent=2)
+            return sc.savejson(filename, json, indent=indent, **kwargs)
         else:
             return json
 
@@ -609,7 +688,7 @@ class Calibration(sc.prettyobj):
                             for run_num, run in enumerate(analyzer_results):
                                 genotypes += [glabel]*len(x)
                                 bins += x.tolist()
-                                values += run[resname][date][g]
+                                values += list(run[resname][date][g])
 
                         # Plot model
                         modeldf = pd.DataFrame({'bins':bins, 'values':values, 'genotypes':genotypes})
@@ -623,7 +702,7 @@ class Calibration(sc.prettyobj):
                         # Construct a dataframe with things in the most logical order for plotting
                         for run_num, run in enumerate(analyzer_results):
                             bins += x.tolist()
-                            values += run[resname][date]
+                            values += list(run[resname][date])
 
                         # Plot model
                         modeldf = pd.DataFrame({'bins':bins, 'values':values})
