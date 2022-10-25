@@ -421,7 +421,6 @@ class MultiSim(hpb.FlexPretty):
         resdict = defaultdict(dict)
         for i,s in enumerate(sim_inds):
             sim = self.sims[s]
-            day = sim.day(t) # Unlikely, but different sims might have different start days
             label = sim.label
             if not label: # Give it a label if it doesn't have one
                 label = f'Sim {i}'
@@ -429,7 +428,10 @@ class MultiSim(hpb.FlexPretty):
                 label += f' ({i})'
             for reskey in sim.result_keys():
                 res = sim.results[reskey]
-                val = res.values[day]
+                if res.values.ndim == 1:
+                    val = res.values[t]
+                elif res.values.ndim == 2:
+                    val = res.values[:,t].sum()
                 if res.scale: # Results that are scaled by population are ints
                     val = int(val)
                 resdict[label][reskey] = val

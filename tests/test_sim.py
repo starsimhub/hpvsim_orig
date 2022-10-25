@@ -167,6 +167,36 @@ def test_states():
     return sim
 
 
+
+def test_dt():
+    sc.heading('Test dt')
+
+    # Define baseline parameters and initialize sim
+    base_pars = dict(n_years=30)
+    base_sim = hpv.Sim(pars=base_pars)
+
+    scenarios = {
+        'dt0.5': {
+            'name': 'dt=0.5',
+            'pars': {
+                'dt':0.5
+            }
+        },
+        'dt1.0': {
+            'name': 'dt=1.0',
+            'pars': {
+                'dt': 1.0
+            }
+        },
+    }
+
+    metapars = {'n_runs': 3}
+    scens = hpv.Scenarios(sim=base_sim, metapars=metapars, scenarios=scenarios)
+    scens.run()
+    scens.plot(to_plot=None)
+    return scens
+
+
 def test_flexible_inputs():
     sc.heading('Testing flexibility of sim inputs')
 
@@ -335,14 +365,15 @@ if __name__ == '__main__':
     # Start timing and optionally enable interactive plotting
     T = sc.tic()
 
-    sim0 = test_microsim()
-    sim1 = test_sim(do_plot=do_plot, do_save=do_save)
-    sim2 = test_epi()
-    sim3 = test_states()
-    sim4 = test_flexible_inputs()
-    sim5 = test_result_consistency()
-    sim6 = test_location_loading()
-    sim7 = test_resuming()
+    # sim0 = test_microsim()
+    # sim1 = test_sim(do_plot=do_plot, do_save=do_save)
+    # sim2 = test_epi()
+    # sim3 = test_states()
+    scens = test_dt()
+    # sim5 = test_flexible_inputs()
+    # sim6 = test_result_consistency()
+    # sim7 = test_location_loading()
+    # sim8 = test_resuming()
 
     sc.toc(T)
     print('Done.')
