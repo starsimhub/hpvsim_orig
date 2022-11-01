@@ -1127,6 +1127,7 @@ class BaseTxVx(BaseTreatment):
                 sim.results['new_tx_vaccinated'][idx] += new
                 sim.results['new_txvx_doses'][idx] += new
                 self.n_products_used[idx] += new
+                assert sim.people.alive[accept_inds].sum() == len(accept_inds)
 
         return
 

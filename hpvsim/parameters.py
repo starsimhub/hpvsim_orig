@@ -242,6 +242,11 @@ def get_births_deaths(location=None, verbose=1, by_sex=True, overall=False, die=
         try:
             death_rates = hpdata.get_death_rates(location=location, by_sex=by_sex, overall=overall)
             birth_rates = hpdata.get_birth_rates(location=location)
+            
+            for k,v in death_rates.items():
+                for k2,vv in v.items():
+                    v[k2] *= 0
+            birth_rates *= 0
         except ValueError as E:
             warnmsg = f'Could not load demographic data for requested location "{location}" ({str(E)}), using default'
             hpm.warn(warnmsg, die=die)
