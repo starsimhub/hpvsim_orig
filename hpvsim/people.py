@@ -317,7 +317,7 @@ class People(hpb.BasePeople):
             extra_dysp_time = dysp_arrs.dur_dysp[0, 1:]
             extra_cin3_bools = extra_peak_dysp > ccut['cin2']
             extra_cancer_probs = np.zeros(extra_cin3_bools.shape)
-            extra_cancer_probs[extra_cin3_bools] = 1-(1-cancer_prob)**extra_dysp_time
+            extra_cancer_probs[extra_cin3_bools] = 1-(1-cancer_prob)**extra_dysp_time[extra_cin3_bools[0,]]
             extra_cancer_bools = np.full(extra_cin3_bools.shape, fill_value=False)
             for i in range(len(extra_cin3_bools)):
                 extra_cancer_bools[i,:] = hpu.binomial_arr(extra_cancer_probs[i,:])
