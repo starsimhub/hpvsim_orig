@@ -216,8 +216,9 @@ class People(hpb.BasePeople):
         gpars = self.pars['genotype_pars'][self.pars['genotype_map'][g]]
         self.set_dysp_rates(inds, g, gpars, hiv_dysp_rate=hiv_pars['dysp_rate'])  # Set variables that determine the probability that dysplasia begins
         dysp_inds = self.set_dysp_status(inds, g, dt)  # Set people's dysplasia status
-        dysp_arrs = self.set_severity(dysp_inds, g, gpars, hiv_prog_rate=hiv_pars['prog_rate'])  # Set dysplasia severity and duration
-        self.set_cin_grades(dysp_inds, g, dt, dysp_arrs=dysp_arrs)  # Set CIN grades and dates over time
+        if len(dysp_inds):
+            dysp_arrs = self.set_severity(dysp_inds, g, gpars, hiv_prog_rate=hiv_pars['prog_rate'])  # Set dysplasia severity and duration
+            self.set_cin_grades(dysp_inds, g, dt, dysp_arrs=dysp_arrs)  # Set CIN grades and dates over time
         return
 
 
@@ -314,10 +315,10 @@ class People(hpb.BasePeople):
             cancer_inds = inds[is_cancer]  # Duplicated below, but avoids need to append extra arrays
             self.scale[cancer_inds] = cancer_scale  # Shrink the weight of the original agents, but otherwise leave them the same
             extra_peak_dysp = dysp_arrs.peak_dysp[:, 1:]
-            extra_dysp_time = dysp_arrs.dur_dysp[0, 1:]
+            extra_dysp_time = dysp_arrs.dur_dysp[:, 1:]
             extra_cin3_bools = extra_peak_dysp > ccut['cin2']
             extra_cancer_probs = np.zeros(extra_cin3_bools.shape)
-            extra_cancer_probs[extra_cin3_bools] = 1-(1-cancer_prob)**extra_dysp_time[extra_cin3_bools[0,]]
+            extra_cancer_probs[extra_cin3_bools] = 1-(1-cancer_prob)**extra_dysp_time[extra_cin3_bools]
             extra_cancer_bools = np.full(extra_cin3_bools.shape, fill_value=False)
             for i in range(len(extra_cin3_bools)):
                 extra_cancer_bools[i,:] = hpu.binomial_arr(extra_cancer_probs[i,:])
