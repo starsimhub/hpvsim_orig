@@ -307,8 +307,9 @@ class People(hpb.BasePeople):
         cancer_scale = self.pars['pop_scale'] / n_extra
         if self.pars['use_multiscale'] and n_extra  > 1:
             is_cin3 = peak_dysp > ccut['cin2']
+            dysp_time = dur_dysp[is_cin3]
             cancer_probs = np.zeros(len(inds))
-            cancer_probs[is_cin3] = cancer_prob
+            cancer_probs[is_cin3] = 1-(1-cancer_prob)**dysp_time
             is_cancer = hpu.binomial_arr(cancer_probs)
             cancer_inds = inds[is_cancer]  # Duplicated below, but avoids need to append extra arrays
             self.scale[cancer_inds] = cancer_scale  # Shrink the weight of the original agents, but otherwise leave them the same
@@ -364,7 +365,8 @@ class People(hpb.BasePeople):
         if self.pars['use_multiscale'] and n_extra > 1:
             cancer_probs[is_cancer] = 1 # Make sure inds that got assigned cancer above dont get stochastically missed
         else:
-            cancer_probs[is_cin3] = cancer_prob
+            dysp_time = dur_dysp[is_cin3]
+            cancer_probs[is_cin3] = 1-(1-cancer_prob)**dysp_time
         is_cancer = hpu.binomial_arr(cancer_probs)
         cin2_inds = inds[is_cin2]  # Indices of those progress at least to CIN2
         cin3_inds = inds[is_cin3]  # Indices of those progress at least to CIN3
