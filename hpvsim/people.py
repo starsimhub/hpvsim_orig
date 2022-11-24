@@ -300,7 +300,7 @@ class People(hpb.BasePeople):
         prog_rate = dysp_arrs.prog_rate[:,0]
         dur_dysp  = dysp_arrs.dur_dysp[:,0]
         gpars = self.pars['genotype_pars'][self.pars['genotype_map'][g]]
-        cancer_prob = gpars['cancer_prob']
+        cancer_prob = gpars['cancer_prob'] # timestep/genotype-specific prob of developing cancer given CIN3
 
         # Handle multiscale to create additional cancer agents
         n_extra = self.pars['ms_agent_ratio'] # Number of extra cancer agents per regular agent
@@ -314,9 +314,10 @@ class People(hpb.BasePeople):
             cancer_inds = inds[is_cancer]  # Duplicated below, but avoids need to append extra arrays
             self.scale[cancer_inds] = cancer_scale  # Shrink the weight of the original agents, but otherwise leave them the same
             extra_peak_dysp = dysp_arrs.peak_dysp[:, 1:]
+            extra_dysp_time = dysp_arrs.dur_dysp[0, 1:]
             extra_cin3_bools = extra_peak_dysp > ccut['cin2']
             extra_cancer_probs = np.zeros(extra_cin3_bools.shape)
-            extra_cancer_probs[extra_cin3_bools] = cancer_prob
+            extra_cancer_probs[extra_cin3_bools] = 1-(1-cancer_prob)**extra_dysp_time
             extra_cancer_bools = np.full(extra_cin3_bools.shape, fill_value=False)
             for i in range(len(extra_cin3_bools)):
                 extra_cancer_bools[i,:] = hpu.binomial_arr(extra_cancer_probs[i,:])
