@@ -986,7 +986,7 @@ class age_results(Analyzer):
 
 class age_causal_infection(Analyzer):
     '''
-    Determine the age at which people with cervical cancer were causally infected and
+    Determine the age at which people with cervical cancer were causally infected, acquired cancer, and
     time spent between infection and cancer.
     '''
 

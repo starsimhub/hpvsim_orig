@@ -365,7 +365,7 @@ class People(hpb.BasePeople):
         is_cin3 = peak_dysp > ccut['cin2']
         cancer_probs = np.zeros(len(inds))
         if self.pars['use_multiscale'] and n_extra > 1:
-            cancer_probs[is_cancer] = 1 # Make sure inds that got assigned cancer above dont get stochastically missed
+            cancer_probs[is_cancer] = 1 # Use preselected cancer inds from above, do not redraw
         else:
             dysp_time = dur_dysp[is_cin3]
             cancer_probs[is_cin3] = 1-(1-cancer_prob)**dysp_time
