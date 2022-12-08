@@ -263,7 +263,7 @@ class Calibration(sc.prettyobj):
             all_pars = self.get_full_pars(sim=self.sim, calib_pars=calib_pars, genotype_pars=genotype_pars)
             return all_pars
         else:
-            return pars, genotype_pars
+            return calib_pars, genotype_pars
 
 
     def sim_to_sample_pars(self):
