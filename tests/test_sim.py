@@ -112,8 +112,6 @@ def test_epi():
             lo = par_effect.range[0]
             hi = par_effect.range[1]
 
-<<<<<<< HEAD
-=======
         if par_effect.par == 'model_hiv':
             base_pars['location'] = 'south africa'
             hiv_datafile = 'test_data/hiv_incidence_south_africa.csv'
@@ -121,7 +119,6 @@ def test_epi():
         else:
             hiv_datafile = None
             art_datafile = None
->>>>>>> develop
 
         pars0 = sc.mergedicts(base_pars, {par_effect.par: lo})  # Use lower parameter bound
         pars1 = sc.mergedicts(base_pars, {par_effect.par: hi})  # Use upper parameter bound
