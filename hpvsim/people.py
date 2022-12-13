@@ -46,7 +46,7 @@ class People(hpb.BasePeople):
     
     #%% Basic methods
 
-    def __init__(self, pars, strict=True, pop_trend=None, pop_age_trend=None, **kwargs):
+    def __init__(self, pars, strict=True, pop_trend=None, **kwargs):
 
         # Initialize the BasePeople, which also sets things up for filtering
         super().__init__(pars)
@@ -55,17 +55,18 @@ class People(hpb.BasePeople):
 
         # Other initialization
         self.pop_trend = pop_trend
-        self.pop_age_trend = pop_age_trend
         self.init_contacts() # Initialize the contacts
-        self.infection_log = [] # Record of infections - keys for ['source','target','date','layer']
+        self.ng = self.pars['n_genotypes']
+        self.na = len(self.pars['age_bins'])-1
+        self.dysp_keys = ['cin1s', 'cin2s', 'cin3s', 'cancers']
 
         self.lag_bins = np.linspace(0,50,51)
         self.rship_lags = dict()
         for lkey in self.layer_keys():
             self.rship_lags[lkey] = np.zeros(len(self.lag_bins)-1, dtype=hpd.default_float)
 
-        # Store age bins for standard population, used for age-standardized incidence calculations
-        self.asr_bins = self.pars['standard_pop'][0, :] # Age bins of the standard population
+        # Store age bins
+        self.age_bins = self.pars['age_bins'] # Age bins for age results
 
         if strict:
             self.lock() # If strict is true, stop further keys from being set (does not affect attributes)
@@ -84,17 +85,12 @@ class People(hpb.BasePeople):
 
     def init_flows(self):
         ''' Initialize flows to be zero '''
-        ng = self.pars['n_genotypes']
         df = hpd.default_float
-        self.flows              = {f'{key}'         : np.zeros(ng, dtype=df) for key in hpd.flow_keys}
-        for tf in hpd.total_flow_keys:
-            self.flows[tf]      = 0
-        self.total_flows        = {f'total_{key}'   : 0 for key in hpd.flow_keys}
-        self.flows_by_sex       = {f'{key}'         : np.zeros(2, dtype=df) for key in hpd.by_sex_keys}
+        self.flows              = {key: 0 for key in hpd.flow_keys}
+        self.genotype_flows     = {key: np.zeros(self.ng, dtype=df) for key in hpd.genotype_flow_keys}
+        self.age_flows          = {key: np.zeros(self.na, dtype=df) for key in hpd.flow_keys}
+        self.sex_flows          = {f'{key}'         : np.zeros(2, dtype=df) for key in hpd.by_sex_keys}
         self.demographic_flows  = {f'{key}'         : 0 for key in hpd.dem_keys}
-        # self.intv_flows         = {f'{key}'         : 0 for key in hpd.intv_flow_keys}
-        self.flows_by_age       = {'cancers_by_age' : np.zeros(len(self.asr_bins)-1)}
-
         return
     
     
@@ -168,8 +164,8 @@ class People(hpb.BasePeople):
             # Apply death rates from other causes
             other_deaths, deaths_female, deaths_male    = self.apply_death_rates(year=year)
             self.demographic_flows['other_deaths']      = other_deaths
-            self.flows_by_sex['other_deaths_by_sex'][0] = deaths_female
-            self.flows_by_sex['other_deaths_by_sex'][1] = deaths_male
+            self.sex_flows['other_deaths_by_sex'][0]    = deaths_female
+            self.sex_flows['other_deaths_by_sex'][1]    = deaths_male
 
             # Add births
             new_births = self.add_births(year=year)
@@ -182,25 +178,17 @@ class People(hpb.BasePeople):
         # Perform updates that are genotype-specific
         ng = self.pars['n_genotypes']
         for g in range(ng):
-            self.flows['cin1s'][g]              = self.check_cin1(g)
-            self.flows['cin2s'][g]              = self.check_cin2(g)
-            self.flows['cin3s'][g]              = self.check_cin3(g)
-            new_cancers, cancers_by_age         = self.check_cancer(g)
-            self.flows['cancers'][g]            += new_cancers
-            self.flows_by_age['cancers_by_age'] += cancers_by_age
-            self.flows['cins'][g]               = self.flows['cin1s'][g]+self.flows['cin2s'][g]+self.flows['cin3s'][g]
+            for key in self.dysp_keys: # Loop over the keys related to dysplasia
+                cases_by_age, cases = self.check_progress(key, g)
+                self.flows[key] += cases # Increment flows (summed over all genotypes)
+                self.genotype_flows[key][g] = cases # Store flows by genotype
+                self.age_flows[key] += cases_by_age # Increment flows by age (summed over all genotypes)
+            self.genotype_flows['cins'][g] = self.genotype_flows['cin1s'][g]+self.genotype_flows['cin2s'][g]+self.genotype_flows['cin3s'][g]
             self.check_clearance(g)
 
         # Perform updates that are not genotype specific
         self.flows['cancer_deaths'] = self.check_cancer_deaths()
-
-        # Create total flows
-        self.total_flows['total_cin1s'] = self.flows['cin1s'].sum()
-        self.total_flows['total_cin2s'] = self.flows['cin2s'].sum()
-        self.total_flows['total_cin3s'] = self.flows['cin3s'].sum()
-        self.total_flows['total_cins']  = self.flows['cins'].sum()
-        self.total_flows['total_cancers']  = self.flows['cancers'].sum()
-        # self.total_flows['total_cancer_deaths']  = self.flows['cancer_deaths'].sum()
+        self.flows['cins'] = self.genotype_flows['cins'].sum()
 
         # Before applying interventions or new infections, calculate the pool of susceptibles
         self.sus_pool = self.susceptible.all(axis=0) # True for people with no infection at the start of the timestep
@@ -513,6 +501,14 @@ class People(hpb.BasePeople):
         return inds
 
 
+    def check_progress(self, what, genotype):
+        ''' Wrapper function for all the new progression checks '''
+        if what=='cin1s':       cases_by_age, cases = self.check_cin1(genotype)
+        elif what=='cin2s':     cases_by_age, cases = self.check_cin2(genotype)
+        elif what=='cin3s':     cases_by_age, cases = self.check_cin3(genotype)
+        elif what=='cancers':   cases_by_age, cases = self.check_cancer(genotype)
+        return cases_by_age, cases
+
     def check_cin1(self, genotype):
         ''' Check for new progressions to CIN1 '''
         # Only include infectious females who haven't already cleared CIN1 or progressed to CIN2
@@ -521,7 +517,10 @@ class People(hpb.BasePeople):
         inds = self.check_inds(self.cin1[genotype,:], self.date_cin1[genotype,:], filter_inds=filter_inds)
         self.cin1[genotype, inds] = True
         self.no_dysp[genotype, inds] = False
-        return self.scale_flows(inds)
+        # Age calculations
+        cases_by_age = np.histogram(self.age[inds], bins=self.age_bins, weights=self.scale[inds])[0]
+
+        return cases_by_age, self.scale_flows(inds)
 
 
     def check_cin2(self, genotype):
@@ -530,7 +529,9 @@ class People(hpb.BasePeople):
         inds = self.check_inds(self.cin2[genotype,:], self.date_cin2[genotype,:], filter_inds=filter_inds)
         self.cin2[genotype, inds] = True
         self.cin1[genotype, inds] = False # No longer counted as CIN1
-        return self.scale_flows(inds)
+        # Age calculations
+        cases_by_age = np.histogram(self.age[inds], bins=self.age_bins, weights=self.scale[inds])[0]
+        return cases_by_age, self.scale_flows(inds)
 
 
     def check_cin3(self, genotype):
@@ -539,24 +540,36 @@ class People(hpb.BasePeople):
         inds = self.check_inds(self.cin3[genotype,:], self.date_cin3[genotype,:], filter_inds=filter_inds)
         self.cin3[genotype, inds] = True
         self.cin2[genotype, inds] = False # No longer counted as CIN2
-        return self.scale_flows(inds)
+        # Age calculations
+        cases_by_age = np.histogram(self.age[inds], bins=self.age_bins, weights=self.scale[inds])[0]
+        return cases_by_age, self.scale_flows(inds)
 
 
     def check_cancer(self, genotype):
         ''' Check for new progressions to cancer '''
         filter_inds = self.true_by_genotype('cin3', genotype)
         inds = self.check_inds(self.cancerous[genotype,:], self.date_cancerous[genotype,:], filter_inds=filter_inds)
-        self.cancerous[genotype, inds] = True
-        self.cin3[genotype, inds] = False # No longer counted as CIN3
-        self.susceptible[:, inds] = False # No longer susceptible to any new genotypes
-        self.date_clearance[:, inds] = np.nan
-
-        # Calculations for age-standardized cancer incidence
         cases_by_age = 0
-        if len(inds)>0:
-            cases_by_age = np.histogram(self.age[inds], bins=self.asr_bins, weights=self.scale[inds])[0]
 
-        return self.scale_flows(inds), cases_by_age
+        if len(inds):
+            # First, set the SIR properties. Once a person has cancer, their are designated
+            # as inactive for all genotypes they may be infected with
+            self.susceptible[:, inds] = False # No longer susceptible to any genotype
+            self.infectious[:, inds]  = False # No longer counted as infectious with any genotype
+            self.date_clearance[:, inds] = np.nan # Remove their clearance dates for all genotypes
+            for g in range(self.ng):
+                if g!=genotype:
+                    self.date_cancerous[g, inds] = np.nan # Remove their date of cancer for all genotypes but the one currently causing cancer
+            self.inactive[:, inds] = True # If this person has any other infections from any other genotypes, set them to inactive
+
+            # Next, set the dysplasia properties
+            self.cancerous[genotype, inds] = True
+            self.cin3[genotype, inds] = False # No longer counted as CIN3
+
+            # Age results
+            cases_by_age = np.histogram(self.age[inds], bins=self.age_bins, weights=self.scale[inds])[0]
+
+        return cases_by_age, self.scale_flows(inds)
 
 
     def check_cancer_deaths(self):
@@ -566,6 +579,8 @@ class People(hpb.BasePeople):
         filter_inds = self.true('cancerous')
         inds = self.check_inds(self.dead_cancer, self.date_dead_cancer, filter_inds=filter_inds)
         self.remove_people(inds, cause='cancer')
+        if len(inds):
+            cases_by_age = np.histogram(self.age[inds], bins=self.age_bins, weights=self.scale[inds])[0]
 
         # check which of these were detected by symptom or screening
         self.flows['detected_cancer_deaths'] += self.scale_flows(hpu.true(self.detected_cancer[inds]))
@@ -664,8 +679,6 @@ class People(hpb.BasePeople):
         NB people are not actually removed to avoid issues with indices
         '''
 
-        if self.t == 0:
-            np.random.rand()
         death_pars = self.pars['death_rates']
         all_years = np.array(list(death_pars.keys()))
         base_year = all_years[0]
@@ -674,8 +687,8 @@ class People(hpb.BasePeople):
         death_probs = np.empty(len(self), dtype=hpd.default_float)
         year_ind = sc.findnearest(all_years, year)
         nearest_year = all_years[year_ind]
-        mx_f = death_pars[nearest_year]['f'][:,1]*self.pars['dt_demog']
-        mx_m = death_pars[nearest_year]['m'][:,1]*self.pars['dt_demog']
+        mx_f = death_pars[nearest_year]['f'][:,1]
+        mx_m = death_pars[nearest_year]['m'][:,1]
 
         death_probs[self.is_female] = mx_f[age_inds[self.is_female]]
         death_probs[self.is_male] = mx_m[age_inds[self.is_male]]
@@ -692,7 +705,7 @@ class People(hpb.BasePeople):
         return other_deaths, deaths_female, deaths_male
 
 
-    def add_births(self, year=None, new_births=None, ages=0, immunity=None):
+    def add_births(self, year=None, new_births=None, ages=0):
         '''
         Add more people to the population
 
@@ -706,7 +719,7 @@ class People(hpb.BasePeople):
         if new_births is None:
             years = self.pars['birth_rates'][0]
             rates = self.pars['birth_rates'][1]
-            this_birth_rate = self.pars['rel_birth']*np.interp(year, years, rates)*self.pars['dt_demog']/1e3
+            this_birth_rate = self.pars['rel_birth']*np.interp(year, years, rates)/1e3
             new_births = sc.randround(this_birth_rate*self.n_alive_level0) # Crude births per 1000
 
         if new_births>0:
@@ -721,10 +734,6 @@ class People(hpb.BasePeople):
             self.sex[new_inds]        = sexes
             self.debut[new_inds]      = debuts
             self.partners[:,new_inds] = partners
-
-            if immunity is not None:
-                self.imm[:,new_inds] = immunity
-
 
         return new_births*self.pars['pop_scale'] # These are not indices, so they scale differently
 
@@ -744,7 +753,6 @@ class People(hpb.BasePeople):
             data_pop = self.pop_trend.pop_size.values
             data_min = data_years[0]
             data_max = data_years[-1]
-            age_dist_data = self.pop_age_trend[self.pop_age_trend.year == int(year)]
 
             # No migration if outside the range of the data
             if year < data_min:
@@ -845,7 +853,6 @@ class People(hpb.BasePeople):
         genotype_pars   = self.pars['genotype_pars']
         genotype_map    = self.pars['genotype_map']
         dur_precin      = genotype_pars[genotype_map[g]]['dur_precin']
-        # dysp_rate       = genotype_pars[genotype_map[g]]['dysp_rate']
 
         # Set date of infection and exposure
         base_t = self.t + offset if offset is not None else self.t
@@ -854,15 +861,16 @@ class People(hpb.BasePeople):
             self.date_exposed[g,inds] = base_t
 
         # Count reinfections and remove any previous dates
-        self.flows['reinfections'][g]           += self.scale_flows((~np.isnan(self.date_clearance[g, inds])).nonzero()[-1])
-        self.total_flows['total_reinfections']  += self.scale_flows((~np.isnan(self.date_clearance[g, inds])).nonzero()[-1])
+        self.genotype_flows['reinfections'][g]  += self.scale_flows((~np.isnan(self.date_clearance[g, inds])).nonzero()[-1])
+        self.flows['reinfections']              += self.scale_flows((~np.isnan(self.date_clearance[g, inds])).nonzero()[-1])
         for key in ['date_clearance', 'date_cin1', 'date_cin2', 'date_cin3']:
             self[key][g, inds] = np.nan
 
         # Count reactivations and adjust latency status
         if layer == 'reactivation':
-            self.flows['reactivations'][g] += self.scale_flows(inds)
-            self.total_flows['total_reactivations'] += self.scale_flows(inds)
+            self.genotype_flows['reactivations'][g] += self.scale_flows(inds)
+            self.flows['reactivations']             += self.scale_flows(inds)
+            self.age_flows['reactivations']         += np.histogram(self.age[inds], bins=self.age_bins, weights=self.scale[inds])[0]
             self.latent[g, inds] = False # Adjust states -- no longer latent
 
         # Update states, genotype info, and flows
@@ -873,14 +881,15 @@ class People(hpb.BasePeople):
         # Add to flow results. Note, we only count these infectious in the results if they happened at this timestep
         if offset is None:
             # Create overall flows
-            self.total_flows['total_infections']    += self.scale_flows(inds) # Add the total count to the total flow data
-            self.flows['infections'][g]             += self.scale_flows(inds) # Add the count by genotype to the flow data
+            self.flows['infections']                += self.scale_flows(inds) # Add the total count to the total flow data
+            self.genotype_flows['infections'][g]    += self.scale_flows(inds) # Add the count by genotype to the flow data
+            self.age_flows['infections'][:]         += np.histogram(self.age[inds], bins=self.age_bins, weights=self.scale[inds])[0]
 
             # Create by-sex flows
             infs_female = self.scale_flows(hpu.true(self.is_female[inds]))
             infs_male = self.scale_flows(hpu.true(self.is_male[inds]))
-            self.flows_by_sex['total_infections_by_sex'][0] += infs_female
-            self.flows_by_sex['total_infections_by_sex'][1] += infs_male
+            self.sex_flows['infections_by_sex'][0] += infs_female
+            self.sex_flows['infections_by_sex'][1] += infs_male
 
         # Now use genotype-specific prognosis probabilities to determine what happens.
         # Only women can progress beyond infection.
