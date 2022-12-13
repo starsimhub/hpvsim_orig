@@ -775,7 +775,7 @@ class People(hpb.BasePeople):
 
             ages_to_remove = hpu.true(difference<0) # Ages where we have too many, need to apply emigration
             n_to_remove = [int(i) for i in difference[ages_to_remove]] # Determine number of agents to remove for each age
-            ages_to_add = hpu.true(difference>0) # Ages where we have too few, need to apply imigration
+            ages_to_add = hpu.true(difference>0) # Ages where we have too few, need to apply immigration
             n_to_add = [int(i) for i in difference[ages_to_add]] # Determine number of agents to add for each age
             ages_to_add_list = np.repeat(ages_to_add, n_to_add)
             self.add_births(new_births=len(ages_to_add_list), ages=np.array(ages_to_add_list))
