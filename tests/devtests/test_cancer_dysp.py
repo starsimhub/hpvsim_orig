@@ -83,8 +83,8 @@ def run_calcs():
 
     # Get parameters
     genotype_pars = sim['genotype_pars']
-    genotype_pars['hpv16']['prog_rate'] = 0.3
-    genotype_pars['hpv18']['prog_rate'] = 0.4
+    genotype_pars['hpv16']['prog_rate'] = 0.2
+    genotype_pars['hpv18']['prog_rate'] = 0.3
 
     genotype_pars['hpv16']['dysp_rate'] = 0.5
     genotype_pars['hpv18']['dysp_rate'] = 0.4
@@ -109,7 +109,7 @@ def run_calcs():
     trans_infl = [genotype_pars[genotype_map[g]]['dysp_infl'] for g in range(ng)]
     prog_rate = [genotype_pars[genotype_map[g]]['prog_rate'] for g in range(ng)]
     prog_rate_sd = [genotype_pars[genotype_map[g]]['prog_rate_sd'] for g in range(ng)]
-    cancer_probs = [0.0005, 0.0005, 0.0005] # Placeholders
+    cancer_probs = [0.002, 0.003, 0.001] # Placeholders
 
 
     set_font(size=20)
@@ -170,6 +170,9 @@ def run_calcs():
 
     def cum_cancer_prob(cp,x,dysp): return 1 - np.power(1-(1-np.power(1-cp,dysp*100)),x)
 
+    def cancer_prob(cp,dysp): return 1-np.power(1-cp, dysp*100)
+
+    twind = ax['D'].twinx()
     # Durations and severity of dysplasia
     for gi, gtype in enumerate(genotypes):
         sigma, scale = lognorm_params(dur_trans[gi]['par1'], dur_trans[gi]['par2'])
@@ -180,8 +183,8 @@ def run_calcs():
             pr = hpu.sample(dist='normal', par1=prog_rate[gi], par2=prog_rate_sd[gi])
             ax['D'].plot(thisx, logf1(thisx, pr), color=colors[gi], lw=1, alpha=0.5, label=gtype.upper())
 
-        cp = cum_cancer_prob(cancer_probs[gi],thisx,logf1(thisx, prog_rate[gi]))
-        ax['D'].twinx().plot(thisx, cp, color=colors[gi], ls='--', lw=3, label=gtype.upper())
+        cp = cancer_prob(cancer_probs[gi],logf1(thisx, prog_rate[gi]))
+        twind.plot(thisx, cp, color=colors[gi], ls='--', lw=3, label=gtype.upper())
 
 
     ax['B'].set_ylabel("")
@@ -192,7 +195,9 @@ def run_calcs():
     ax['D'].set_xlabel("Duration of transforming infection (years)")
 
     ax['D'].set_ylabel("Degree of transformation")
-    ax['D'].twinx().set_ylabel("Probability of cervical cancer invasion")
+
+    twind.set_ylabel("Probability of cervical cancer invasion")
+    twind.set_ylim([0,1])
     ax['D'].set_ylim([0, 1])
     ax['D'].grid()
 
