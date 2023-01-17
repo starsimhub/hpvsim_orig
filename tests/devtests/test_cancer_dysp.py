@@ -82,8 +82,11 @@ def run_calcs():
 
     genotype_pars['hpv16']['dur_precin']['par1'] = 1.5
     genotype_pars['hpv18']['dur_precin']['par1'] = 2
+    genotype_pars['hrhpv']['dur_precin']['par1'] = 2.5
     genotype_pars['hpv16']['dur_precin']['par2'] = 1.5
     genotype_pars['hpv18']['dur_precin']['par2'] = 2
+    genotype_pars['hrhpv']['dur_precin']['par2'] = 3
+
 
     # Shorten duration names
     dur_prod = [genotype_pars[genotype_map[g]]['dur_precin'] for g in range(ng)]
@@ -104,14 +107,30 @@ def run_calcs():
     ####################
 
     x = np.linspace(0.01, 10, 200)  # Make an array of durations 0-3 years
-    glabels = [16, 18, 'OHR']
+    glabels = ['HPV16', 'HPV18', 'HRHPV']
+    dysp_shares = []
+    gtypes = []
+    igi = 0.01  # Define the integration interval
+    longx = sc.inclusiverange(0.01, 20, igi)  # Initialize a LONG array of years
 
     # Loop over genotypes, plot each one
     for gi, gtype in enumerate(genotypes):
         sigma, scale = lognorm_params(dur_prod[gi]['par1'], dur_prod[gi]['par2'])
         rv = lognorm(sigma, 0, scale)
+        aa = np.diff(rv.cdf(longx))  # Calculate the probability that a woman will have a pre-dysplasia duration in any of the subintervals of time spanning 0-25 years
+        bb = logf1(longx, trans_rate[gi])[1:]  # Calculate the probablity of her developing dysplasia for a given duration
+        dysp_shares.append(np.dot(aa,bb))  # Convolve the two above calculations to determine the probability of her developing dysplasia overall
+        gtypes.append(gtype)  # Store genotype names for labeling
         ax['A'].plot(x, rv.pdf(x), color=colors[gi], lw=2, label=glabels[gi])
         ax['C'].plot(x, logf1(x, trans_rate[gi]), color=colors[gi], lw=2, label=gtype.upper())
+
+    bottom = np.zeros(ng)
+    ax['E'].bar(np.arange(1, ng + 1), 1-np.array(dysp_shares), color='grey', bottom=bottom, label='Productive')
+    ax['E'].bar(np.arange(1, ng + 1), np.array(dysp_shares), color=cmap[0], bottom=1-np.array(dysp_shares), label='Transforming')
+    ax['E'].set_xticks(np.arange(1, ng + 1))
+    ax['E'].set_xticklabels(glabels)
+    ax['E'].set_ylabel("")
+    ax['E'].set_ylabel("Distribution of infection outcomes")
 
     # Axis labeling and other settings
     ax['C'].set_xlabel("Duration of productive infection prior to\nclearance or transformation (years)")
@@ -124,6 +143,8 @@ def run_calcs():
     ax['A'].set_xlabel("Duration of productive infection prior to\nclearance or transformation (years)")
 
     ax['A'].legend(fontsize=20, frameon=False)
+    ax['E'].legend(fontsize=20, frameon=True)
+
 
     ####################
     # Make plots
@@ -166,11 +187,11 @@ def run_calcs():
     ax['F'].set_xlabel("Duration of transforming infection prior to\nregression/cancer (years)")
     ax['F'].set_ylabel("Probability of cervical\ncancer invasion")
     ax['F'].legend(fontsize=20, frameon=True, loc='best')
-    ax['E'].set_axis_off()
+    # ax['E'].set_axis_off()
 
 
     fig.tight_layout()
-    fig.show()
+    plt.savefig(f"AA_cells.png", dpi=100)
 
 
 #%% Run as a script
