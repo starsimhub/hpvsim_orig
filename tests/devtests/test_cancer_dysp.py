@@ -157,8 +157,8 @@ def run_calcs():
     ax['C'].set_ylabel("Probability of transformation")
     ax['A'].set_xlabel("Duration of productive infection prior to\nclearance or transformation (years)")
 
-    ax['A'].legend(fontsize=20, frameon=False)
-    ax['E'].legend(fontsize=20, frameon=True)
+    ax['A'].legend(fontsize=20, frameon=True)
+    ax['E'].legend(fontsize=20, frameon=True, loc='lower right')
 
 
     ####################
@@ -174,7 +174,7 @@ def run_calcs():
         result = [1-np.product([((1-cp)**(100*dd[i]))**(j-i) for i in range(j)]) for j in range(n)]
         return result
 
-    # def cum_cancer_prob(cp,x,dysp): return 1 - np.power(1-(1-np.power(1-cp,dysp*100)),x)
+    def cum_cancer_prob(cp,x,dysp): return 1 - np.power(1-(1-np.power(1-cp,dysp*100)),x)
 
     def cancer_prob(cp,dysp): return 1-np.power(1-cp, dysp*100)
 
@@ -190,7 +190,6 @@ def run_calcs():
             pr = hpu.sample(dist='normal', par1=prog_rate[gi], par2=prog_rate_sd[gi])
             ax['D'].plot(thisx, logf1(thisx, pr), color=colors[gi], lw=1, alpha=0.5, label=gtype.upper())
 
-        # cp = cancer_prob(cancer_probs[gi],logf1(thisx, prog_rate[gi]))
         cp = cum_cancer_prob_traj(cancer_probs[gi],thisx, logf1(thisx, prog_rate[gi]))
         cps.append(cp)
         twind.plot(thisx, cp, color=colors[gi], ls='--', lw=3, label=gtype.upper())
@@ -208,6 +207,10 @@ def run_calcs():
     twind.set_ylim([0,1])
     ax['D'].set_ylim([0, 1])
     ax['D'].grid()
+    h, l = ax['D'].get_legend_handles_labels()
+    h1, l1 = twind.get_legend_handles_labels()
+
+    ax['D'].legend([h[0], h1[0]], ['% of cells transformed', 'Prob of cervical cancer invasion'], loc='upper left')
 
     ####################
     # Panel F
@@ -247,7 +250,6 @@ def run_calcs():
 
     for gn, grade in enumerate(['CIN2/3', 'Cervical cancer']):
         ydata = np.array(all_shares[gn])
-        # if len(ydata.shape) > 1: ydata = ydata[:, 0]
         color = cmap[gn +1, :]
         ax['F'].bar(np.arange(1, ng + 1), ydata, color=color, bottom=bottom, label=grade)
         bottom = bottom + ydata
@@ -256,7 +258,7 @@ def run_calcs():
     ax['F'].set_xticklabels(glabels)
     ax['F'].set_ylabel("")
     ax['F'].set_ylabel("Distribution of transformation outcomes")
-    ax['F'].legend(fontsize=20, frameon=True, loc='best')
+    ax['F'].legend(fontsize=20, frameon=True, loc='lower right')
 
     fig.tight_layout()
     plt.savefig(f"AA_cells.png", dpi=100)
