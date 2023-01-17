@@ -109,7 +109,7 @@ def run_calcs():
     trans_infl = [genotype_pars[genotype_map[g]]['dysp_infl'] for g in range(ng)]
     prog_rate = [genotype_pars[genotype_map[g]]['prog_rate'] for g in range(ng)]
     prog_rate_sd = [genotype_pars[genotype_map[g]]['prog_rate_sd'] for g in range(ng)]
-    cancer_probs = [0.002, 0.003, 0.001] # Placeholders
+    cancer_probs = [0.005, 0.003, 0.001] # Placeholders
 
 
     set_font(size=20)
