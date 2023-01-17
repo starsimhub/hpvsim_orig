@@ -12,24 +12,24 @@ import matplotlib.pyplot as plt
 from scipy.stats import lognorm
 
 
-# Create sim to get baseline prognoses parameters
-sim = hpv.Sim(genotypes=[16,18,'hrhpv'])
-# sim = hpv.Sim(genotypes=[16,18,31,33,35,51,52,56,58])
-sim.initialize()
-
-# Get parameters
-ng = sim['n_genotypes']
-genotype_pars = sim['genotype_pars']
-genotype_map = sim['genotype_map']
-cancer_thresh = 0.99
-
-
-# Shorten duration names
-dur_precin = [genotype_pars[genotype_map[g]]['dur_precin'] for g in range(ng)]
-dur_dysp = [genotype_pars[genotype_map[g]]['dur_dysp'] for g in range(ng)]
-dysp_rate = [genotype_pars[genotype_map[g]]['dysp_rate'] for g in range(ng)]
-prog_rate = [genotype_pars[genotype_map[g]]['prog_rate'] for g in range(ng)]
-prog_rate_sd = [genotype_pars[genotype_map[g]]['prog_rate_sd'] for g in range(ng)]
+# # Create sim to get baseline prognoses parameters
+# sim = hpv.Sim(genotypes=[16,18,'hrhpv'])
+# # sim = hpv.Sim(genotypes=[16,18,31,33,35,51,52,56,58])
+# sim.initialize()
+#
+# # Get parameters
+# ng = sim['n_genotypes']
+# genotype_pars = sim['genotype_pars']
+# genotype_map = sim['genotype_map']
+# cancer_thresh = 0.99
+#
+#
+# # Shorten duration names
+# dur_precin = [genotype_pars[genotype_map[g]]['dur_precin'] for g in range(ng)]
+# dur_dysp = [genotype_pars[genotype_map[g]]['dur_dysp'] for g in range(ng)]
+# dysp_rate = [genotype_pars[genotype_map[g]]['dysp_rate'] for g in range(ng)]
+# prog_rate = [genotype_pars[genotype_map[g]]['prog_rate'] for g in range(ng)]
+# prog_rate_sd = [genotype_pars[genotype_map[g]]['prog_rate_sd'] for g in range(ng)]
 
 
 def lognorm_params(par1, par2):
@@ -67,8 +67,6 @@ def run_calcs():
     genotypes = ['hpv16', 'hpv18', 'hrhpv']
     sim = hpv.Sim(genotypes=genotypes)
     sim.initialize()
-    sim['genotype_pars']['hpv16']['prog_rate'] = 0.3
-    sim['genotype_pars']['hpv18']['prog_rate'] = 0.4
 
     # Get parameters
     ng = sim['n_genotypes']
@@ -76,20 +74,56 @@ def run_calcs():
 
     # Get parameters
     genotype_pars = sim['genotype_pars']
+    genotype_pars['hpv16']['prog_rate'] = 0.2
+    genotype_pars['hpv18']['prog_rate'] = 0.3
+    genotype_pars['hpv16']['dysp_rate'] = 0.2
+    genotype_pars['hpv18']['dysp_rate'] = 0.3
+    genotype_pars['hrhpv']['dysp_rate'] = 0.1
+
+    genotype_pars['hpv16']['dur_precin']['par1'] = 1.5
+    genotype_pars['hpv18']['dur_precin']['par1'] = 2
+    genotype_pars['hpv16']['dur_precin']['par2'] = 1.5
+    genotype_pars['hpv18']['dur_precin']['par2'] = 2
 
     # Shorten duration names
-    dur_precin = [genotype_pars[genotype_map[g]]['dur_precin'] for g in range(ng)]
-    dur_dysp = [genotype_pars[genotype_map[g]]['dur_dysp'] for g in range(ng)]
-    dysp_rate = [genotype_pars[genotype_map[g]]['dysp_rate'] for g in range(ng)]
+    dur_prod = [genotype_pars[genotype_map[g]]['dur_precin'] for g in range(ng)]
+    dur_trans = [genotype_pars[genotype_map[g]]['dur_dysp'] for g in range(ng)]
+    trans_rate = [genotype_pars[genotype_map[g]]['dysp_rate'] for g in range(ng)]
     prog_rate = [genotype_pars[genotype_map[g]]['prog_rate'] for g in range(ng)]
-    cancer_probs = [0.001, 0.002, 0.0005] # Placeholders
+    prog_rate_sd = [genotype_pars[genotype_map[g]]['prog_rate_sd'] for g in range(ng)]
+    cancer_probs = [0.0005, 0.0005, 0.0005] # Placeholders
 
 
-    set_font(size=32)
+    set_font(size=20)
     colors = sc.gridcolors(ng)
     cmap = plt.cm.Oranges([0.25, 0.5, 0.75, 1])
-    fig, ax = plt.subplot_mosaic('A;B;C', figsize=(16, 20))
+    fig, ax = plt.subplot_mosaic('AB;CD;EF', figsize=(16, 20))
 
+    ####################
+    # Panel A and C
+    ####################
+
+    x = np.linspace(0.01, 10, 200)  # Make an array of durations 0-3 years
+    glabels = [16, 18, 'OHR']
+
+    # Loop over genotypes, plot each one
+    for gi, gtype in enumerate(genotypes):
+        sigma, scale = lognorm_params(dur_prod[gi]['par1'], dur_prod[gi]['par2'])
+        rv = lognorm(sigma, 0, scale)
+        ax['A'].plot(x, rv.pdf(x), color=colors[gi], lw=2, label=glabels[gi])
+        ax['C'].plot(x, logf1(x, trans_rate[gi]), color=colors[gi], lw=2, label=gtype.upper())
+
+    # Axis labeling and other settings
+    ax['C'].set_xlabel("Duration of productive infection prior to\nclearance or transformation (years)")
+    for axn in ['A', 'C']:
+        ax[axn].set_ylabel("")
+        ax[axn].grid()
+
+    ax['A'].set_ylabel("Density")
+    ax['C'].set_ylabel("Probability of transformation")
+    ax['A'].set_xlabel("Duration of productive infection prior to\nclearance or transformation (years)")
+
+    ax['A'].legend(fontsize=20, frameon=False)
 
     ####################
     # Make plots
@@ -102,40 +136,41 @@ def run_calcs():
 
     # Durations and severity of dysplasia
     for gi, gtype in enumerate(genotypes):
-        sigma, scale = lognorm_params(dur_dysp[gi]['par1'], dur_dysp[gi]['par2'])
+        sigma, scale = lognorm_params(dur_trans[gi]['par1'], dur_trans[gi]['par2'])
         rv = lognorm(sigma, 0, scale)
-        ax['A'].plot(thisx, rv.pdf(thisx), color=colors[gi], lw=2, label=gtype.upper())
-        ax['B'].plot(thisx, logf1(thisx, prog_rate[gi]), color=colors[gi], lw=3, label=gtype.upper())
+        ax['B'].plot(thisx, rv.pdf(thisx), color=colors[gi], lw=2, label=gtype.upper())
+        ax['D'].plot(thisx, logf1(thisx, prog_rate[gi]), color=colors[gi], lw=3, label=gtype.upper())
         for smpl in range(n_samples):
             pr = hpu.sample(dist='normal', par1=prog_rate[gi], par2=prog_rate_sd[gi])
-            ax['B'].plot(thisx, logf1(thisx, pr), color=colors[gi], lw=1, alpha=0.5, label=gtype.upper())
+            ax['D'].plot(thisx, logf1(thisx, pr), color=colors[gi], lw=1, alpha=0.5, label=gtype.upper())
 
         cp = cum_cancer_prob(cancer_probs[gi],thisx,logf1(thisx, prog_rate[gi]))
-        ax['C'].plot(thisx, cp, color=colors[gi], lw=2, label=gtype.upper())
+        ax['F'].plot(thisx, cp, color=colors[gi], lw=2, label=gtype.upper())
 
 
-    ax['A'].set_ylabel("")
-    ax['A'].grid()
-    ax['A'].set_ylabel("Density")
+    ax['B'].set_ylabel("")
+    ax['B'].grid()
+    ax['B'].set_ylabel("Density")
 
-    ax['B'].set_ylabel("Degree of dysplasia")
-    ax['B'].set_ylim([0, 1])
-    ax['B'].axhline(y=0.33, ls=':', c='k')
-    ax['B'].axhline(y=0.67, ls=':', c='k')
-    ax['B'].axhspan(0, 0.33, color=cmap[0], alpha=.4)
-    ax['B'].axhspan(0.33, 0.67, color=cmap[1], alpha=.4)
-    ax['B'].axhspan(0.67, 1, color=cmap[2], alpha=.4)
-    ax['B'].text(-0.3, 0.08, 'CIN1', rotation=90)
-    ax['B'].text(-0.3, 0.4, 'CIN2', rotation=90)
-    ax['B'].text(-0.3, 0.73, 'CIN3', rotation=90)
+    ax['B'].set_xlabel("Duration of transforming infection prior to\nregression/cancer (years)")
+    ax['D'].set_xlabel("Duration of transforming infection prior to\nregression/cancer (years)")
 
-    ax['C'].set_xlabel("Duration of dysplasia prior to\nregression/cancer (years)")
-    ax['C'].set_ylabel("Probability of cervical\ncancer invasion")
-    ax['C'].legend(fontsize=20, frameon=True, loc='best')
+    ax['D'].set_ylabel("Degree of transformation")
+    ax['D'].set_ylim([0, 1])
+    ax['D'].axhline(y=0.5, ls=':', c='k')
+    ax['D'].axhspan(0, 0.5, color=cmap[1], alpha=.4)
+    ax['D'].axhspan(0.5, 1, color=cmap[2], alpha=.4)
+    ax['D'].text(-0.3, 0.22, 'CIN2', rotation=90)
+    ax['D'].text(-0.3, 0.72, 'CIN3', rotation=90)
+
+    ax['F'].set_xlabel("Duration of transforming infection prior to\nregression/cancer (years)")
+    ax['F'].set_ylabel("Probability of cervical\ncancer invasion")
+    ax['F'].legend(fontsize=20, frameon=True, loc='best')
+    ax['E'].set_axis_off()
 
 
     fig.tight_layout()
-    plt.savefig(f"AA_cells.png", dpi=100)
+    fig.show()
 
 
 #%% Run as a script
