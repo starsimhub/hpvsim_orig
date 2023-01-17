@@ -109,7 +109,7 @@ def run_calcs():
     trans_infl = [genotype_pars[genotype_map[g]]['dysp_infl'] for g in range(ng)]
     prog_rate = [genotype_pars[genotype_map[g]]['prog_rate'] for g in range(ng)]
     prog_rate_sd = [genotype_pars[genotype_map[g]]['prog_rate_sd'] for g in range(ng)]
-    cancer_probs = [0.005, 0.003, 0.001] # Placeholders
+    cancer_probs = [0.0005, 0.0003, 0.0001] # Placeholders
 
 
     set_font(size=20)
@@ -168,12 +168,19 @@ def run_calcs():
     thisx = np.linspace(0.01, 25, 100)
     n_samples = 10
 
-    def cum_cancer_prob(cp,x,dysp): return 1 - np.power(1-(1-np.power(1-cp,dysp*100)),x)
+    def cum_cancer_prob_traj(cp,x,dysp):
+        dd = np.diff(dysp)
+        n = len(x)
+        result = [1-np.product([((1-cp)**(100*dd[i]))**(j-i) for i in range(j)]) for j in range(n)]
+        return result
+
+    # def cum_cancer_prob(cp,x,dysp): return 1 - np.power(1-(1-np.power(1-cp,dysp*100)),x)
 
     def cancer_prob(cp,dysp): return 1-np.power(1-cp, dysp*100)
 
     twind = ax['D'].twinx()
     # Durations and severity of dysplasia
+    cps = []
     for gi, gtype in enumerate(genotypes):
         sigma, scale = lognorm_params(dur_trans[gi]['par1'], dur_trans[gi]['par2'])
         rv = lognorm(sigma, 0, scale)
@@ -183,9 +190,10 @@ def run_calcs():
             pr = hpu.sample(dist='normal', par1=prog_rate[gi], par2=prog_rate_sd[gi])
             ax['D'].plot(thisx, logf1(thisx, pr), color=colors[gi], lw=1, alpha=0.5, label=gtype.upper())
 
-        cp = cancer_prob(cancer_probs[gi],logf1(thisx, prog_rate[gi]))
+        # cp = cancer_prob(cancer_probs[gi],logf1(thisx, prog_rate[gi]))
+        cp = cum_cancer_prob_traj(cancer_probs[gi],thisx, logf1(thisx, prog_rate[gi]))
+        cps.append(cp)
         twind.plot(thisx, cp, color=colors[gi], ls='--', lw=3, label=gtype.upper())
-
 
     ax['B'].set_ylabel("")
     ax['B'].grid()
@@ -210,14 +218,18 @@ def run_calcs():
 
     for g, gtype in enumerate(genotypes):
         # Next, determine the outcomes for women who do develop dysplasia
-        sigma, scale = lognorm_params(dur_prod[g]['par1'], dur_prod[g]['par2'])  # Calculate parameters in the format expected by scipy
+        sigma, scale = lognorm_params(dur_trans[g]['par1'], dur_trans[g]['par2'])  # Calculate parameters in the format expected by scipy
         rv = lognorm(sigma, 0, scale)  # Create scipy rv object
         samps = rv.rvs(size=1000)
-        deg_trans = logf1(samps, prog_rate[g])  # Calculate degree of transformation
 
         # To start find women who advance to cancer
-        cp = cum_cancer_prob(cancer_probs[g], samps, deg_trans)
-        cancer_inds = hpu.true(hpu.n_binomial(cp, len(samps)))  # Use binomial probabilities to determine the indices of those who get cancer
+        cps_here = []
+        for si, samp_dur in enumerate(samps):
+            samp = round(samp_dur)
+            ind = sc.findnearest(thisx, samp)
+            cp = cps[g][ind]
+            cps_here.append(cp)
+        cancer_inds = hpu.true(hpu.n_binomial(np.array(cps_here), len(samps)))  # Use binomial probabilities to determine the indices of those who get cancer
 
         cancer_share_of_cins = len(cancer_inds) / len(samps)  # Share of CIN women who get cancer
 
