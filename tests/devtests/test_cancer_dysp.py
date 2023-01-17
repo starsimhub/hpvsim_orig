@@ -83,8 +83,8 @@ def run_calcs():
 
     # Get parameters
     genotype_pars = sim['genotype_pars']
-    genotype_pars['hpv16']['prog_rate'] = 0.2
-    genotype_pars['hpv18']['prog_rate'] = 0.3
+    genotype_pars['hpv16']['prog_rate'] = 0.3
+    genotype_pars['hpv18']['prog_rate'] = 0.4
 
     genotype_pars['hpv16']['dysp_rate'] = 0.5
     genotype_pars['hpv18']['dysp_rate'] = 0.4
@@ -228,7 +228,7 @@ def run_calcs():
                   cancershares
                   ]
 
-    for gn, grade in enumerate(['CIN2+', 'Cervical cancer']):
+    for gn, grade in enumerate(['CIN2/3', 'Cervical cancer']):
         ydata = np.array(all_shares[gn])
         # if len(ydata.shape) > 1: ydata = ydata[:, 0]
         color = cmap[gn +1, :]
