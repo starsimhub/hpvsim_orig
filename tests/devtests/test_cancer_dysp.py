@@ -181,7 +181,7 @@ def run_calcs():
             ax['D'].plot(thisx, logf1(thisx, pr), color=colors[gi], lw=1, alpha=0.5, label=gtype.upper())
 
         cp = cum_cancer_prob(cancer_probs[gi],thisx,logf1(thisx, prog_rate[gi]))
-        ax['F'].plot(thisx, cp, color=colors[gi], lw=2, label=gtype.upper())
+        ax['D'].twinx().plot(thisx, cp, color=colors[gi], ls='--', lw=3, label=gtype.upper())
 
 
     ax['B'].set_ylabel("")
@@ -192,18 +192,54 @@ def run_calcs():
     ax['D'].set_xlabel("Duration of transforming infection (years)")
 
     ax['D'].set_ylabel("Degree of transformation")
+    ax['D'].twinx().set_ylabel("Probability of cervical cancer invasion")
     ax['D'].set_ylim([0, 1])
-    ax['D'].axhline(y=0.5, ls=':', c='k')
-    ax['D'].axhspan(0, 0.5, color=cmap[1], alpha=.4)
-    ax['D'].axhspan(0.5, 1, color=cmap[2], alpha=.4)
-    ax['D'].text(-0.3, 0.22, 'CIN2', rotation=90)
-    ax['D'].text(-0.3, 0.72, 'CIN3', rotation=90)
+    ax['D'].grid()
 
-    ax['F'].set_xlabel("Duration of transforming infection (years)")
-    ax['F'].set_ylabel("Probability of cervical\ncancer invasion")
+    ####################
+    # Panel F
+    ####################
+
+    # This section calculates the overall share of outcomes for people infected with each genotype
+    cinshares, cancershares = [], []  # Initialize share by each outcome
+
+    for g, gtype in enumerate(genotypes):
+        # Next, determine the outcomes for women who do develop dysplasia
+        sigma, scale = lognorm_params(dur_prod[g]['par1'], dur_prod[g]['par2'])  # Calculate parameters in the format expected by scipy
+        rv = lognorm(sigma, 0, scale)  # Create scipy rv object
+        samps = rv.rvs(size=1000)
+        deg_trans = logf1(samps, prog_rate[g])  # Calculate degree of transformation
+
+        # To start find women who advance to cancer
+        cp = cum_cancer_prob(cancer_probs[g], samps, deg_trans)
+        cancer_inds = hpu.true(hpu.n_binomial(cp, len(samps)))  # Use binomial probabilities to determine the indices of those who get cancer
+
+        cancer_share_of_cins = len(cancer_inds) / len(samps)  # Share of CIN women who get cancer
+
+        cin_share = 1 - cancer_share_of_cins
+        cancer_share = 1 - (cin_share)
+
+        cinshares.append(cin_share)
+        cancershares.append(cancer_share)
+
+    # Final plot
+    bottom = np.zeros(ng)
+    all_shares = [cinshares,
+                  cancershares
+                  ]
+
+    for gn, grade in enumerate(['CIN2+', 'Cervical cancer']):
+        ydata = np.array(all_shares[gn])
+        # if len(ydata.shape) > 1: ydata = ydata[:, 0]
+        color = cmap[gn +1, :]
+        ax['F'].bar(np.arange(1, ng + 1), ydata, color=color, bottom=bottom, label=grade)
+        bottom = bottom + ydata
+
+    ax['F'].set_xticks(np.arange(1, ng + 1))
+    ax['F'].set_xticklabels(glabels)
+    ax['F'].set_ylabel("")
+    ax['F'].set_ylabel("Distribution of transformation outcomes")
     ax['F'].legend(fontsize=20, frameon=True, loc='best')
-    # ax['E'].set_axis_off()
-
 
     fig.tight_layout()
     plt.savefig(f"AA_cells.png", dpi=100)
