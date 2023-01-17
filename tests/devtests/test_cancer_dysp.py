@@ -53,6 +53,15 @@ def logf1(x, k):
     '''
     return (2 / (1 + np.exp(-k * x))) - 1
 
+
+def logf2(x, x_infl, k):
+    '''
+    Logistic function, constrained to pass through 0,0 and with upper asymptote
+    at 1. Accepts 2 parameters: growth rate and point of inflexion.
+    '''
+    l_asymp = -1/(1+np.exp(k*x_infl))
+    return l_asymp + 1/( 1 + np.exp(-k*(x-x_infl)))
+
 def set_font(size=None, font='Libertinus Sans'):
     ''' Set a custom font '''
     sc.fonts(add=sc.thisdir(aspath=True) / 'assets' / 'LibertinusSans-Regular.otf')
@@ -76,15 +85,20 @@ def run_calcs():
     genotype_pars = sim['genotype_pars']
     genotype_pars['hpv16']['prog_rate'] = 0.2
     genotype_pars['hpv18']['prog_rate'] = 0.3
-    genotype_pars['hpv16']['dysp_rate'] = 0.2
-    genotype_pars['hpv18']['dysp_rate'] = 0.3
+
+    genotype_pars['hpv16']['dysp_rate'] = 0.5
+    genotype_pars['hpv18']['dysp_rate'] = 0.4
     genotype_pars['hrhpv']['dysp_rate'] = 0.1
 
-    genotype_pars['hpv16']['dur_precin']['par1'] = 1.5
-    genotype_pars['hpv18']['dur_precin']['par1'] = 2
+    genotype_pars['hpv16']['dysp_infl'] = 6
+    genotype_pars['hpv18']['dysp_infl'] = 6
+    genotype_pars['hrhpv']['dysp_infl'] = 6
+
+    genotype_pars['hpv16']['dur_precin']['par1'] = 2
+    genotype_pars['hpv18']['dur_precin']['par1'] = 1.5
     genotype_pars['hrhpv']['dur_precin']['par1'] = 2.5
-    genotype_pars['hpv16']['dur_precin']['par2'] = 1.5
-    genotype_pars['hpv18']['dur_precin']['par2'] = 2
+    genotype_pars['hpv16']['dur_precin']['par2'] = 2
+    genotype_pars['hpv18']['dur_precin']['par2'] = 1.5
     genotype_pars['hrhpv']['dur_precin']['par2'] = 3
 
 
@@ -92,6 +106,7 @@ def run_calcs():
     dur_prod = [genotype_pars[genotype_map[g]]['dur_precin'] for g in range(ng)]
     dur_trans = [genotype_pars[genotype_map[g]]['dur_dysp'] for g in range(ng)]
     trans_rate = [genotype_pars[genotype_map[g]]['dysp_rate'] for g in range(ng)]
+    trans_infl = [genotype_pars[genotype_map[g]]['dysp_infl'] for g in range(ng)]
     prog_rate = [genotype_pars[genotype_map[g]]['prog_rate'] for g in range(ng)]
     prog_rate_sd = [genotype_pars[genotype_map[g]]['prog_rate_sd'] for g in range(ng)]
     cancer_probs = [0.0005, 0.0005, 0.0005] # Placeholders
@@ -118,11 +133,11 @@ def run_calcs():
         sigma, scale = lognorm_params(dur_prod[gi]['par1'], dur_prod[gi]['par2'])
         rv = lognorm(sigma, 0, scale)
         aa = np.diff(rv.cdf(longx))  # Calculate the probability that a woman will have a pre-dysplasia duration in any of the subintervals of time spanning 0-25 years
-        bb = logf1(longx, trans_rate[gi])[1:]  # Calculate the probablity of her developing dysplasia for a given duration
+        bb = logf2(longx, trans_infl[gi], trans_rate[gi])[1:]  # Calculate the probablity of her developing dysplasia for a given duration
         dysp_shares.append(np.dot(aa,bb))  # Convolve the two above calculations to determine the probability of her developing dysplasia overall
         gtypes.append(gtype)  # Store genotype names for labeling
         ax['A'].plot(x, rv.pdf(x), color=colors[gi], lw=2, label=glabels[gi])
-        ax['C'].plot(x, logf1(x, trans_rate[gi]), color=colors[gi], lw=2, label=gtype.upper())
+        ax['C'].plot(x, logf2(x, trans_infl[gi], trans_rate[gi]), color=colors[gi], lw=2, label=gtype.upper())
 
     bottom = np.zeros(ng)
     ax['E'].bar(np.arange(1, ng + 1), 1-np.array(dysp_shares), color='grey', bottom=bottom, label='Productive')
@@ -133,7 +148,7 @@ def run_calcs():
     ax['E'].set_ylabel("Distribution of infection outcomes")
 
     # Axis labeling and other settings
-    ax['C'].set_xlabel("Duration of productive infection prior to\nclearance or transformation (years)")
+    ax['C'].set_xlabel("Duration of productive infection (years)")
     for axn in ['A', 'C']:
         ax[axn].set_ylabel("")
         ax[axn].grid()
@@ -174,7 +189,7 @@ def run_calcs():
     ax['B'].set_ylabel("Density")
 
     ax['B'].set_xlabel("Duration of transforming infection prior to\nregression/cancer (years)")
-    ax['D'].set_xlabel("Duration of transforming infection prior to\nregression/cancer (years)")
+    ax['D'].set_xlabel("Duration of transforming infection (years)")
 
     ax['D'].set_ylabel("Degree of transformation")
     ax['D'].set_ylim([0, 1])
@@ -184,7 +199,7 @@ def run_calcs():
     ax['D'].text(-0.3, 0.22, 'CIN2', rotation=90)
     ax['D'].text(-0.3, 0.72, 'CIN3', rotation=90)
 
-    ax['F'].set_xlabel("Duration of transforming infection prior to\nregression/cancer (years)")
+    ax['F'].set_xlabel("Duration of transforming infection (years)")
     ax['F'].set_ylabel("Probability of cervical\ncancer invasion")
     ax['F'].legend(fontsize=20, frameon=True, loc='best')
     # ax['E'].set_axis_off()
