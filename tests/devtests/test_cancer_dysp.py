@@ -9,27 +9,7 @@ import sciris as sc
 import hpvsim as hpv
 import hpvsim.utils as hpu
 import matplotlib.pyplot as plt
-from scipy.stats import lognorm
-
-
-# # Create sim to get baseline prognoses parameters
-# sim = hpv.Sim(genotypes=[16,18,'hrhpv'])
-# # sim = hpv.Sim(genotypes=[16,18,31,33,35,51,52,56,58])
-# sim.initialize()
-#
-# # Get parameters
-# ng = sim['n_genotypes']
-# genotype_pars = sim['genotype_pars']
-# genotype_map = sim['genotype_map']
-# cancer_thresh = 0.99
-#
-#
-# # Shorten duration names
-# dur_precin = [genotype_pars[genotype_map[g]]['dur_precin'] for g in range(ng)]
-# dur_dysp = [genotype_pars[genotype_map[g]]['dur_dysp'] for g in range(ng)]
-# dysp_rate = [genotype_pars[genotype_map[g]]['dysp_rate'] for g in range(ng)]
-# prog_rate = [genotype_pars[genotype_map[g]]['prog_rate'] for g in range(ng)]
-# prog_rate_sd = [genotype_pars[genotype_map[g]]['prog_rate_sd'] for g in range(ng)]
+from scipy.stats import lognorm, nbinom
 
 
 def lognorm_params(par1, par2):
@@ -44,6 +24,11 @@ def lognorm_params(par1, par2):
     scale = np.exp(mean)
     shape = sigma
     return shape, scale
+
+def nbinom_params(par1, par2, step=0.01):
+    nbn_n = par2
+    nbn_p = par2/(par1/step + par2)
+    return nbn_n, nbn_p, step
 
 
 def logf1(x, k):
@@ -61,6 +46,7 @@ def logf2(x, x_infl, k):
     '''
     l_asymp = -1/(1+np.exp(k*x_infl))
     return l_asymp + 1/( 1 + np.exp(-k*(x-x_infl)))
+
 
 def set_font(size=None, font='Libertinus Sans'):
     ''' Set a custom font '''
@@ -101,6 +87,9 @@ def run_calcs():
     genotype_pars['hpv18']['dur_precin']['par2'] = 1.5
     genotype_pars['hrhpv']['dur_precin']['par2'] = 3
 
+    genotype_pars['hpv16']['dur_dysp'] = dict(dist='neg_binomial', par1=3, par2=5)
+    genotype_pars['hpv18']['dur_dysp'] = dict(dist='neg_binomial', par1=2, par2=.1)
+    genotype_pars['hrhpv']['dur_dysp'] = dict(dist='neg_binomial', par1=5, par2=3)
 
     # Shorten duration names
     dur_prod = [genotype_pars[genotype_map[g]]['dur_precin'] for g in range(ng)]
@@ -182,15 +171,30 @@ def run_calcs():
     # Durations and severity of dysplasia
     cps = []
     for gi, gtype in enumerate(genotypes):
-        sigma, scale = lognorm_params(dur_trans[gi]['par1'], dur_trans[gi]['par2'])
-        rv = lognorm(sigma, 0, scale)
-        ax['B'].plot(thisx, rv.pdf(thisx), color=colors[gi], lw=2, label=gtype.upper())
-        ax['D'].plot(thisx, logf1(thisx, prog_rate[gi]), color=colors[gi], lw=3, label=gtype.upper())
-        for smpl in range(n_samples):
+
+        # Get distribution of transforming infection
+        if dur_trans[gi]['dist'] == 'lognormal':
+            sigma, scale = lognorm_params(dur_trans[gi]['par1'], dur_trans[gi]['par2'])
+            rv = lognorm(sigma, 0, scale)
+            dur_dysp = rv.pdf(thisx)
+            ax['B'].plot(thisx, dur_dysp, color=colors[gi], lw=2, label=gtype.upper())
+        elif dur_trans[gi]['dist'] == 'neg_binomial':
+            nbn_n, nbn_p, step = nbinom_params(dur_trans[gi]['par1'], dur_trans[gi]['par2'])
+            rv = nbinom(nbn_n, nbn_p)
+            x = np.arange(1,25)
+            dur_dysp = rv.pmf(x/step)
+            ax['B'].plot(x, dur_dysp, color=colors[gi], lw=2, label=gtype.upper())
+            # ax['B'].vlines(x, 0, dur_dysp, colors=colors[gi], linestyles='-', lw=2, label=gtype.upper())
+
+        # Get dysplasia over time
+        dysp = logf1(thisx, prog_rate[gi])
+        ax['D'].plot(thisx, dysp, color=colors[gi], lw=3, label=gtype.upper()) # Plot mean
+        for smpl in range(n_samples): # Plot sampled trajectories
             pr = hpu.sample(dist='normal', par1=prog_rate[gi], par2=prog_rate_sd[gi])
             ax['D'].plot(thisx, logf1(thisx, pr), color=colors[gi], lw=1, alpha=0.5, label=gtype.upper())
 
-        cp = cum_cancer_prob_traj(cancer_probs[gi],thisx, logf1(thisx, prog_rate[gi]))
+        # Get dysplasia over time
+        cp = cum_cancer_prob_traj(cancer_probs[gi],thisx, dysp)
         cps.append(cp)
         twind.plot(thisx, cp, color=colors[gi], ls='--', lw=3, label=gtype.upper())
 
@@ -221,9 +225,15 @@ def run_calcs():
 
     for g, gtype in enumerate(genotypes):
         # Next, determine the outcomes for women who do develop dysplasia
-        sigma, scale = lognorm_params(dur_trans[g]['par1'], dur_trans[g]['par2'])  # Calculate parameters in the format expected by scipy
-        rv = lognorm(sigma, 0, scale)  # Create scipy rv object
-        samps = rv.rvs(size=1000)
+        if dur_trans[g]['dist'] == 'lognormal':
+            sigma, scale = lognorm_params(dur_trans[g]['par1'], dur_trans[g]['par2'])  # Calculate parameters in the format expected by scipy
+            rv = lognorm(sigma, 0, scale)  # Create scipy rv object
+            samps = rv.rvs(size=1000)
+        elif dur_trans[g]['dist'] == 'neg_binomial':
+            nbn_n, nbn_p, step = nbinom_params(dur_trans[gi]['par1'], dur_trans[gi]['par2'])
+            rv = nbinom(nbn_n, nbn_p)
+            x = np.arange(1,25)
+            samps = rv.rvs(size=1000)*step
 
         # To start find women who advance to cancer
         cps_here = []
