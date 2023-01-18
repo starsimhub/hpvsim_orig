@@ -9,7 +9,7 @@ import sciris as sc
 import hpvsim as hpv
 import hpvsim.utils as hpu
 import matplotlib.pyplot as plt
-from scipy.stats import lognorm
+from scipy.stats import lognorm, weibull_min
 
 
 # # Create sim to get baseline prognoses parameters
@@ -183,7 +183,8 @@ def run_calcs():
     cps = []
     for gi, gtype in enumerate(genotypes):
         sigma, scale = lognorm_params(dur_trans[gi]['par1'], dur_trans[gi]['par2'])
-        rv = lognorm(sigma, 0, scale)
+        rv = weibull_min(c=1.5, scale=7)
+        # rv = lognorm(sigma, 0, scale)
         ax['B'].plot(thisx, rv.pdf(thisx), color=colors[gi], lw=2, label=gtype.upper())
         ax['D'].plot(thisx, logf1(thisx, prog_rate[gi]), color=colors[gi], lw=3, label=gtype.upper())
         for smpl in range(n_samples):
@@ -201,7 +202,7 @@ def run_calcs():
     ax['B'].set_xlabel("Duration of transforming infection prior to\nregression/cancer (years)")
     ax['D'].set_xlabel("Duration of transforming infection (years)")
 
-    ax['D'].set_ylabel("Degree of transformation")
+    ax['D'].set_ylabel("% of cells transformed")
 
     twind.set_ylabel("Probability of cervical cancer invasion")
     twind.set_ylim([0,1])
@@ -223,6 +224,7 @@ def run_calcs():
         # Next, determine the outcomes for women who do develop dysplasia
         sigma, scale = lognorm_params(dur_trans[g]['par1'], dur_trans[g]['par2'])  # Calculate parameters in the format expected by scipy
         rv = lognorm(sigma, 0, scale)  # Create scipy rv object
+        rv = weibull_min(c=1.5, scale=7)
         samps = rv.rvs(size=1000)
 
         # To start find women who advance to cancer
