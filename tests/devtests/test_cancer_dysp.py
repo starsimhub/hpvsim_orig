@@ -9,7 +9,7 @@ import sciris as sc
 import hpvsim as hpv
 import hpvsim.utils as hpu
 import matplotlib.pyplot as plt
-from scipy.stats import lognorm, nbinom
+from scipy.stats import lognorm, weibull_min, nbinom
 
 
 def lognorm_params(par1, par2):
@@ -29,7 +29,6 @@ def nbinom_params(par1, par2, step=0.01):
     nbn_n = par2
     nbn_p = par2/(par1/step + par2)
     return nbn_n, nbn_p, step
-
 
 def logf1(x, k):
     '''
@@ -184,7 +183,9 @@ def run_calcs():
             x = np.arange(1,25)
             dur_dysp = rv.pmf(x/step)
             ax['B'].plot(x, dur_dysp, color=colors[gi], lw=2, label=gtype.upper())
-            # ax['B'].vlines(x, 0, dur_dysp, colors=colors[gi], linestyles='-', lw=2, label=gtype.upper())
+        elif dur_trans[gi]['dist'] == 'weibull':
+            rv = weibull_min(c=1.5, scale=7)
+            ax['B'].plot(thisx, rv.pdf(thisx), color=colors[gi], lw=2, label=gtype.upper())
 
         # Get dysplasia over time
         dysp = logf1(thisx, prog_rate[gi])
@@ -205,7 +206,7 @@ def run_calcs():
     ax['B'].set_xlabel("Duration of transforming infection prior to\nregression/cancer (years)")
     ax['D'].set_xlabel("Duration of transforming infection (years)")
 
-    ax['D'].set_ylabel("Degree of transformation")
+    ax['D'].set_ylabel("% of cells transformed")
 
     twind.set_ylabel("Probability of cervical cancer invasion")
     twind.set_ylim([0,1])
@@ -234,6 +235,9 @@ def run_calcs():
             rv = nbinom(nbn_n, nbn_p)
             x = np.arange(1,25)
             samps = rv.rvs(size=1000)*step
+        elif dur_trans[g]['dist'] == 'weibull':
+            rv = weibull_min(c=1.5, scale=7)
+            samps = rv.rvs(size=1000)
 
         # To start find women who advance to cancer
         cps_here = []
