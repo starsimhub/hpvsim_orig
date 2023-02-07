@@ -1162,6 +1162,12 @@ class BaseTxVx(BaseTreatment):
 
             if n_new_doses:
                 self.outcomes = self.product.administer(sim, accept_inds) # Administer
+                successful_inds = np.intersect1d(new_vx_inds, self.outcomes['successful'])
+                if len(successful_inds):
+                    new_cell_imm = hpu.sample(**self.product.cell_imm_init, size=len(successful_inds))
+                    for i in [0,1]:
+                        sim.people.cell_imm[i, successful_inds] = np.maximum(new_cell_imm, sim.people.cell_imm[i, successful_inds])
+
                 sim.people.tx_vaccinated[accept_inds] = True
                 sim.people.date_tx_vaccinated[accept_inds] = sim.t
                 sim.people.txvx_doses[accept_inds] += 1
@@ -1307,13 +1313,14 @@ class tx(Product):
     Treatment products include anything used to treat cancer or precancer, as well as therapeutic vaccination.
     They change fundamental properties about People, including their prognoses and infectiousness.
     '''
-    def __init__(self, df, clearance=0.8, name=None):
+    def __init__(self, df, clearance=0.8, cell_imm_init=None, name=None):
         self.df = df
         self.clearance = clearance
         self.name = df.name.unique()[0]
         self.states = df.state.unique()
         self.genotypes = df.genotype.unique()
         self.ng = len(self.genotypes)
+        self.cell_imm_init=cell_imm_init
 
     def get_people_in_state(self, state, g, sim):
         '''
@@ -1456,7 +1463,10 @@ def default_tx(prod_name=None):
     dftx = pd.read_csv(datafiles.tx) # Read in dataframe with parameters
     txprods = dict()
     for name in dftx.name.unique():
-        txprods[name] = tx(dftx[dftx.name==name])
+        if 'txvx' in name:
+            txprods[name] = tx(dftx[dftx.name==name], cell_imm_init=dict(dist='beta_mean', par1=0.75, par2=0.025))
+        else:
+            txprods[name] = tx(dftx[dftx.name==name])
     if prod_name is not None:   return txprods[prod_name]
     else:                       return txprods
 
