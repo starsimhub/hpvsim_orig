@@ -21,17 +21,50 @@ class HIVsim(hpb.ParsObj):
         self.people = sim.people
         # Define default parameters, can be overwritten by hiv_pars
         pars['hiv_pars'] = {
-            'rel_sus': 2.2,  # Increased risk of acquiring HPV
-            'rel_hiv_sev_infl': {'cd4_200': 0.36, 'cd4_200_500': 0.76},  # Speed up growth of disease severity
-            'rel_hiv_imm': {'cd4_200': 0.36, 'cd4_200_500': 0.76},  # Reduction in immunity acquired after infection/vaccination
-            'reactivation_prob': 3, # Unused for now, TODO: add in rel_reactivation to make functional
+            'rel_sus': { # Increased risk of acquiring HPV
+                'cat1': {
+                    'cd4_lower': 0,
+                    'cd4_upper': 200,
+                    'value': 2.2
+                },
+                'cat2': {
+                    'cd4_lower': 200,
+                    'cd4_upper': 500,
+                    'value': 2.2
+                }
+            },
+            'rel_sev_infl': { # Speed up growth of disease severity
+                'cat1':{
+                    'cd4_lower': 0,
+                    'cd4_upper': 200,
+                    'value': 0.36
+                },
+                'cat2': {
+                    'cd4_lower': 200,
+                    'cd4_upper': 500,
+                    'value': 0.76
+                }
+            },
+            'rel_imm': { # Reduction in immunity acquired after infection/vaccination
+                'cat1': {
+                    'cd4_lower': 0,
+                    'cd4_upper': 200,
+                    'value': 0.36
+                },
+                'cat2': {
+                    'cd4_lower': 200,
+                    'cd4_upper': 500,
+                    'value': 0.76
+                }
+            },
+            'rel_reactivation_prob': 3, # Unused for now, TODO: add in rel_reactivation to make functional
             'time_to_hiv_death_shape': 2, # shape parameter for weibull distribution, based on https://royalsocietypublishing.org/action/downloadSupplement?doi=10.1098%2Frsif.2013.0613&file=rsif20130613supp1.pdf
             'time_to_hiv_death_scale': lambda a: 21.182 - 0.2717*a, # scale parameter for weibull distribution, based on https://royalsocietypublishing.org/action/downloadSupplement?doi=10.1098%2Frsif.2013.0613&file=rsif20130613supp1.pdf
             'cd4_start': dict(dist='normal', par1=594, par2=20),
             'cd4_trajectory': lambda f: (24.363 - 16.672*f)**2, # based on https://docs.idmod.org/projects/emod-hiv/en/latest/hiv-model-healthcare-systems.html?highlight=art#art-s-impact-on-cd4-count
             'cd4_reconstitution': lambda m: 15.584*m - 0.2113*m**2, # growth in CD4 count following ART initiation
             'art_failure_prob': 0.1, # Percentage of people on ART who will not suppress virus successfully
-            'dt_art': 1.0 # Timestep (annually) at which ART updates are made
+            'dt_art': 1.0 # Timestep (annually) at which ART and CD4 updates are made
         }
 
         self.init_states()
@@ -50,7 +83,9 @@ class HIVsim(hpb.ParsObj):
     def init_states(self):
         hiv_states = [
             hpd.State('cd4', hpd.default_float, np.nan),
+            hpd.State('hiv', bool, False),
             hpd.State('art', bool, False),
+            hpd.State('date_hiv', hpd.default_float, np.nan),
             hpd.State('date_art', hpd.default_float, np.nan),
             hpd.State('date_dead_hiv', hpd.default_float, np.nan),
             hpd.State('dead_hiv', bool, False),
@@ -80,6 +115,11 @@ class HIVsim(hpb.ParsObj):
         results['hiv_prevalence_by_age'] = init_res('HIV prevalence by age', n_rows=na)
         results['hiv_incidence'] = init_res('HIV incidence')
         results['hiv_incidence_by_age'] = init_res('HIV incidence by age', n_rows=na)
+        results['n_hpv_by_age_with_hiv'] = init_res('Number HPV infections by age among HIV+', n_rows=na)
+        results['n_hpv_by_age_no_hiv'] = init_res('Number HPV infections by age among HIV-', n_rows=na)
+        results['hpv_prevalence_by_age_with_hiv'] = init_res('HPV prevalence by age among HIV+', n_rows=na)
+        results['hpv_prevalence_by_age_no_hiv'] = init_res('HPV prevalence by age among HIV-', n_rows=na)
+
         self.results = results
         return
 
@@ -142,6 +182,7 @@ class HIVsim(hpb.ParsObj):
         filter_inds = self.people.true('hiv')
         inds = self.people.check_inds(self.people.dead_hiv, self.people.date_dead_hiv, filter_inds=filter_inds)
         self.people.remove_people(inds, cause='hiv')
+        self.people['hiv'][inds] = False
         return
 
 
@@ -155,29 +196,28 @@ class HIVsim(hpb.ParsObj):
             not_art_inds = filter_inds[hpu.false(self.people.art[filter_inds])]
 
             # First take care of people not on ART
-            frac_prognosis = 100*(self.people.t - self.people.date_hiv[not_art_inds])* self.people.dt/self.people.dur_hiv[not_art_inds]
+            frac_prognosis = 100 * (self.people.t - self.people.date_hiv[not_art_inds]) * self.people.dt / \
+                             self.people.dur_hiv[not_art_inds]
             cd4_change = self.cd4_decline_diff[frac_prognosis.astype(np.int64)]
             self.people.cd4[not_art_inds] += cd4_change
 
             # Now take care of people on ART
-            months_on_ART = (self.people.t - self.people.date_art[art_inds])*12
+            mpy = 12
+            months_on_ART = (self.people.t - self.people.date_art[art_inds]) * mpy
             cd4_change = self['hiv_pars']['cd4_reconstitution'](months_on_ART)
             self.people.cd4[art_inds] += cd4_change
 
-            cd4_200_inds = sc.findinds(self.people.cd4 < 200)
-            cd4_200_500_inds = sc.findinds((self.people.cd4 > 200) & (self.people.cd4 < 500))
+            inds_to_update = sc.autolist()
+            for ir, rel_par in enumerate(['rel_sus', 'rel_sev_infl', 'rel_imm']):
+                for cat, catvals in self['hiv_pars'][rel_par].items():
+                    inds = sc.findinds((self.people.cd4 >= catvals['cd4_lower']) & (self.people.cd4 < catvals['cd4_upper']))
+                    if len(inds):
+                        inds_to_update += list(inds)
+                        self.people[rel_par][inds] = catvals['value']
 
-            if len(cd4_200_inds):
-                self.people.rel_sev_infl[cd4_200_inds] = self['hiv_pars']['rel_hiv_sev_infl']['cd4_200']
-                self.people.rel_sus[cd4_200_inds] = self['hiv_pars']['rel_sus']
-                self.people.rel_imm[cd4_200_inds] = self['hiv_pars']['rel_hiv_imm']['cd4_200']
-                self.update_hpv_progs(cd4_200_inds)  # Update any HPV prognoses
-
-            if len(cd4_200_500_inds):
-                self.people.rel_sev_infl[cd4_200_500_inds] = self['hiv_pars']['rel_hiv_sev_infl']['cd4_200_500']
-                self.people.rel_sus[cd4_200_500_inds] = self['hiv_pars']['rel_sus']
-                self.people.rel_imm[cd4_200_500_inds] = self['hiv_pars']['rel_hiv_imm']['cd4_200']
-                self.update_hpv_progs(cd4_200_500_inds)  # Update any HPV prognoses
+            if len(inds_to_update):
+                inds_to_update = np.array(list(set(inds_to_update)))
+                self.update_hpv_progs(inds_to_update)
 
         return
 
@@ -201,7 +241,8 @@ class HIVsim(hpb.ParsObj):
             self.set_hiv_prognoses(new_infection_inds, year=year)  # Set ART adherence for those with HIV
 
         self.check_hiv_mortality()
-        self.check_cd4()
+        if t % update_freq == 0:
+            self.check_cd4()
         self.update_hiv_results(new_infection_inds)
         new_infections = self.people.scale_flows(new_infection_inds) # Return scaled number of infections
         return new_infections
@@ -256,6 +297,13 @@ class HIVsim(hpb.ParsObj):
             hivinds = hpu.true(self.people['hiv'])
             self.results['n_hiv_by_age'][:, idx] = np.histogram(self.people.age[hivinds], bins=self.people.age_bins, weights=self.people.scale[hivinds])[0]
 
+            # Pull out those with HPV and HIV+
+            hpvhivinds = hpu.true((self.people['hiv']) & self.people['infectious'])
+            self.results['n_hpv_by_age_with_hiv'][:, idx] = np.histogram(self.people.age[hpvhivinds], bins=self.people.age_bins, weights=self.people.scale[hpvhivinds])[0]
+
+            # Pull out those with HPV and HIV-
+            hpvnohivinds = hpu.true(~(self.people['hiv']) & self.people['infectious'])
+            self.results['n_hpv_by_age_no_hiv'][:, idx] = np.histogram(self.people.age[hpvnohivinds], bins=self.people.age_bins, weights=self.people.scale[hpvnohivinds])[0]
 
     def get_hiv_data(self, hiv_datafile=None, art_datafile=None):
         '''
@@ -336,8 +384,13 @@ class HIVsim(hpb.ParsObj):
                 answer[:, fill_inds] = num[:, fill_inds] / denom[fill_inds]
             return answer
 
+        ng = sim.pars['n_genotypes']
+        no_hiv_by_age = simres['n_alive_by_age'][:] - res['n_hiv_by_age'][:]
         self.results['hiv_prevalence_by_age'][:] = safedivide(res['n_hiv_by_age'][:], simres['n_alive_by_age'][:])
         self.results['hiv_incidence'][:] = sc.safedivide(res['hiv_infections'][:], (simres['n_alive'][:] - res['n_hiv'][:]))
         self.results['hiv_incidence_by_age'][:] = sc.safedivide(res['hiv_infections_by_age'][:], (simres['n_alive_by_age'][:] - res['n_hiv_by_age'][:]))
         self.results['hiv_prevalence'][:] = sc.safedivide(res['n_hiv'][:], simres['n_alive'][:])
+        self.results['hpv_prevalence_by_age_with_hiv'][:] = safedivide(res['n_hpv_by_age_with_hiv'][:], ng*res['n_hiv_by_age'][:])
+        self.results['hpv_prevalence_by_age_no_hiv'][:] = safedivide(res['n_hpv_by_age_no_hiv'][:], ng*no_hiv_by_age)
+        sim.results = sc.mergedicts(simres, self.results)
         return

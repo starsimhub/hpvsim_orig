@@ -40,7 +40,7 @@ def test_hiv(model_hiv=True):
         art_datafile=art_datafile
     )
     sim.run()
-    sim.plot(to_plot=['hiv_prevalence'])
+    sim.plot(to_plot=['hiv_prevalence_by_age', 'hpv_prevalence_by_age_with_hiv', 'hpv_prevalence_by_age_no_hiv'])
     return sim
 
 
@@ -68,20 +68,9 @@ def test_impact_on_cancer():
             }
         },
         'hiv_baseline': {
-            'name': 'HIV, baseline',
+            'name': 'HIV',
             'pars': {
                 'model_hiv': True
-            }
-        },
-        'hiv_elevated_risk': {
-            'name': 'HIV, elevated risk',
-            'pars': {
-                'model_hiv': True,
-            },
-            'hiv_pars': {
-                'rel_sus': 3,
-                'rel_hiv_sev_infl': {'cd4_200': 0.36, 'cd4_200_500': 0.76},
-                'rel_hiv_imm': {'cd4_200': 0.1, 'cd4_200_500': 0.5},
             }
         }
     }
@@ -108,7 +97,7 @@ if __name__ == '__main__':
 
     # Start timing and optionally enable interactive plotting
     T = sc.tic()
-    # sim0 = test_hiv(model_hiv=True)
-    sim1 = test_impact_on_cancer()
+    sim0 = test_hiv(model_hiv=True)
+    # sim1 = test_impact_on_cancer()
     sc.toc(T)
     print('Done.')
