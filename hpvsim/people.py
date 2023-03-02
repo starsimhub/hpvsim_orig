@@ -251,8 +251,7 @@ class People(hpb.BasePeople):
             full_size = (len(inds), n_extra)  # Main axis is indices, but include columns for multiscale agents
             extra_sev_rate = hpu.sample(dist='normal_pos', par1=gpars['sev_rate'], par2=gpars['sev_rate_sd'], size=full_size)
             extra_dur_episomal = hpu.sample(**gpars['dur_episomal'], size=full_size)
-            extra_sev_infl = gpars['sev_infl'] * self.rel_sev_infl[inds]# This assumes none of the extra agents have HIV...
-            extra_sev_infl = extra_sev_infl[:, None] * np.full(fill_value=1, shape=full_size)
+            extra_sev_infl = (gpars['sev_infl'] * self.rel_sev_infl[inds])[:, None] * np.full(fill_value=1, shape=full_size)# This assumes none of the extra agents have HIV...
             extra_sev = hpu.logf2(extra_dur_episomal, extra_sev_infl, extra_sev_rate)
 
             # Based on the severity values, determine transformation probabilities
@@ -289,6 +288,11 @@ class People(hpb.BasePeople):
                 new_sev_rate = extra_sev_rate[:,1:][extra_transform_bools]
                 new_dur_episomal = extra_dur_episomal[:,1:][extra_transform_bools]
                 new_sev_infl = extra_sev_infl[:,1:][extra_transform_bools]
+                new_sevs = extra_sev[:,1:][extra_transform_bools]
+                if len((new_sevs < 0.3).nonzero()[0]):
+                    improbable_sev_bools = (new_sevs < 0.3).nonzero()[0]
+                    improbable_sevs = new_sevs[(new_sevs < 0.3).nonzero()[0]]
+                    improbable_transform_probs = hpu.transform_prob(transform_prob, improbable_sevs)
                 self.sev_infl[g, new_inds] = new_sev_infl
                 self.sev_rate[g, new_inds] = new_sev_rate
                 self.dur_episomal[g, new_inds] = new_dur_episomal
@@ -320,8 +324,14 @@ class People(hpb.BasePeople):
                                                          sc.randround(time_to_clear / dt))
 
         self.date_transformed[g, transform_inds] = self.t + sc.randround(dur_episomal[is_transform] / dt)
+        sevs = hpu.logf2(self.dur_episomal[g,transform_inds], self.sev_infl[g,transform_inds], self.sev_rate[g,transform_inds])
         dur_transformed = hpu.sample(**self.pars['dur_transformed'], size=len(transform_inds))
         self.date_cancerous[g, transform_inds] = self.date_transformed[g, transform_inds] + sc.randround(dur_transformed / dt)
+        improbable_inds = transform_inds[hpu.true(self.date_cancerous[g, transform_inds] < self.date_cin2[g, transform_inds])]
+        if len(improbable_inds):
+            improbable_sevs = sevs[hpu.true(self.date_cancerous[g, transform_inds] < self.date_cin2[g, transform_inds])]
+            print('iamhere')
+
         self.dur_infection[g, transform_inds] = self.dur_infection[g, transform_inds] + dur_transformed
 
         dur_cancer = hpu.sample(**self.pars['dur_cancer'], size=len(transform_inds))
@@ -457,10 +467,14 @@ class People(hpb.BasePeople):
             else:
                 date_cin2 = self.date_cin2[g,inds]
                 change_inds = hpu.true(date_cin2 > self.t)
+                if len(change_inds):
+                    print('iamhere')
                 self.date_cin2[g,inds[change_inds]] = np.nan
 
                 date_cin3 = self.date_cin3[g,inds]
                 change_inds = hpu.true(date_cin3 > self.t)
+                if len(change_inds):
+                    print('iamhere')
                 self.date_cin3[g,inds[change_inds]] = np.nan
 
         # Set the properties related to cell changes and disease severity markers
