@@ -105,8 +105,9 @@ def transform_prob(tp,dysp):
     Returns transformation probability given % of dysplastic cells
     '''
 
-    return 1-np.power(1-tp, dysp*100)
-
+    res = 1 - np.power(1 - tp, dysp * 100)
+    res[dysp < 0.4] = 0
+    return res
 
 def clearance_prob(init_clearance_prob, clearance_decay, dysp):
     '''

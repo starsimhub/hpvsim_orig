@@ -326,6 +326,7 @@ class People(hpb.BasePeople):
         self.date_transformed[g, transform_inds] = self.t + sc.randround(dur_episomal[is_transform] / dt)
         sevs = hpu.logf2(self.dur_episomal[g,transform_inds], self.sev_infl[g,transform_inds], self.sev_rate[g,transform_inds])
         dur_transformed = hpu.sample(**self.pars['dur_transformed'], size=len(transform_inds))
+        # dur_transformed /= sevs
         self.date_cancerous[g, transform_inds] = self.date_transformed[g, transform_inds] + sc.randround(dur_transformed / dt)
         improbable_inds = transform_inds[hpu.true(self.date_cancerous[g, transform_inds] < self.date_cin2[g, transform_inds])]
         if len(improbable_inds):
