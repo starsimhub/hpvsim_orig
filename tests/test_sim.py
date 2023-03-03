@@ -232,7 +232,7 @@ def test_states():
                     raise ValueError('No-one susceptible should have abnormal cells.')
 
                 # Severity markers
-                v1 = len(hpv.true((np.isnan(people.sev[g,:]) & people.infectious[g,:] & people.is_female & ~removed))) == 0
+                v1 = len(hpv.true((np.isnan(people.sev[g,:]) & people.cin[g,:] & people.is_female & ~removed))) == 0
                 if not v1:
                     raise ValueError('All women with active infection should have a severity marker.')
                 v2 = len(hpv.true((~np.isnan(people.sev[g,:]) & ~people.infectious[g,:] & people.is_female & ~removed))) == 0
