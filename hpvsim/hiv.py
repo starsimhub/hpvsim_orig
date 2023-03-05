@@ -46,6 +46,7 @@ class HIVsim(hpb.ParsObj):
                 'gt200': 0.76,
             },
             'rel_reactivation_prob': 3, # Unused for now, TODO: add in rel_reactivation to make functional
+            'model_hiv_death': True, # whether or not to model HIV mortality. Typically only set to False for testing purposes
             'time_to_hiv_death_shape': 2, # shape parameter for weibull distribution, based on https://royalsocietypublishing.org/action/downloadSupplement?doi=10.1098%2Frsif.2013.0613&file=rsif20130613supp1.pdf
             'time_to_hiv_death_scale': lambda a: 21.182 - 0.2717*a, # scale parameter for weibull distribution, based on https://royalsocietypublishing.org/action/downloadSupplement?doi=10.1098%2Frsif.2013.0613&file=rsif20130613supp1.pdf
             'cd4_start': dict(dist='normal', par1=594, par2=20),
@@ -58,9 +59,9 @@ class HIVsim(hpb.ParsObj):
         self.update_pars(old_pars=pars, new_pars=hiv_pars, create=True)
         self.init_results(sim)
 
-        y = np.linspace(0,1,101)
-        cd4_decline = self['hiv_pars']['cd4_trajectory'](y)
-        self.cd4_decline_diff = np.diff(cd4_decline)
+        # y = np.linspace(0,1,101)
+        # cd4_decline = self['hiv_pars']['cd4_trajectory'](y)
+        # self.cd4_decline_diff = np.diff(cd4_decline)
 
         return
 
@@ -157,8 +158,7 @@ class HIVsim(hpb.ParsObj):
         nearest_year = all_years[year_ind]
 
         # Apply ART coverage by age to people
-        art_covs = art_cov[nearest_year]#[1, :]
-
+        art_covs = art_cov[nearest_year]
         art_probs = np.zeros(len(people), dtype=hpd.default_float)
         art_probs[inds] = art_covs
 
@@ -167,29 +167,33 @@ class HIVsim(hpb.ParsObj):
         art_inds = hpu.true(art_bools)
         people.art[art_inds] = True
         people.date_art[art_inds] = people.t
-        people.date_dead_hiv[art_inds] = np.nan
-        people.dur_hiv[art_inds] = np.nan
 
-        if incident:
-            # Filter those who are not on ART and assign time to HIV death
-            no_art_inds = np.setdiff1d(inds, art_inds)
-            scale = self['hiv_pars']['time_to_hiv_death_scale'](people.age[no_art_inds])
-            scale = np.maximum(scale, 0)
-            time_to_hiv_death = weibull_min.rvs(c=shape, scale=scale, size=len(no_art_inds))
-            people.dur_hiv[no_art_inds] = time_to_hiv_death
-            people.date_dead_hiv[no_art_inds] = people.t + sc.randround(time_to_hiv_death / dt)
-
-        # Find those on ART who will not be virologically suppressed and assign time to HIV death
+        # Get indices of people who are on ART who will not be virologically suppressed
         art_failure_prob = self['hiv_pars']['art_failure_prob']
         art_failure_probs = np.full(len(art_inds), fill_value=art_failure_prob, dtype=hpd.default_float)
         art_failure_bools = hpu.binomial_arr(art_failure_probs)
         art_failure_inds = art_inds[art_failure_bools]
 
-        scale = self['hiv_pars']['time_to_hiv_death_scale'](people.age[art_failure_inds])
+        # Get indices of those to assign death dates for, if we are modeling HIV death
+        assign_death_inds = art_failure_inds # Assign death to those not with ART failure
+
+        if incident: # Additionally, assign death to those who never go on ART
+            no_art_inds = np.setdiff1d(inds, art_inds)
+            assign_death_inds = np.array(assign_death_inds.tolist() + no_art_inds.tolist())
+
+        scale = self['hiv_pars']['time_to_hiv_death_scale'](people.age[assign_death_inds])
         scale = np.maximum(scale, 0)
-        time_to_hiv_death = weibull_min.rvs(c=shape, scale=scale, size=len(art_failure_inds))
-        people.dur_hiv[art_failure_inds] = time_to_hiv_death
-        people.date_dead_hiv[art_failure_inds] = people.t + sc.randround(time_to_hiv_death / dt)
+        time_to_hiv_death = weibull_min.rvs(c=shape, scale=scale, size=len(assign_death_inds))
+        people.dur_hiv[assign_death_inds] = time_to_hiv_death
+        if self['hiv_pars']['model_hiv_death']:
+            people.date_dead_hiv[assign_death_inds] = people.t + sc.randround(time_to_hiv_death / dt)
+
+        # If we're not modeling HIV death, just set duration of HIV is just the length of the person's life
+        # else:
+        #     import traceback;
+        #     traceback.print_exc();
+        #     import pdb;
+        #     pdb.set_trace()
 
         return
 
@@ -205,7 +209,7 @@ class HIVsim(hpb.ParsObj):
         return
 
 
-    def check_cd4(self, people):
+    def update_cd4(self, people):
         '''
         Update CD4 counts
         '''
@@ -216,9 +220,8 @@ class HIVsim(hpb.ParsObj):
             not_art_inds = filter_inds[hpu.false(people.art[filter_inds])]
 
             # First take care of people not on ART
-            frac_prognosis = (people.t - people.date_hiv[not_art_inds]) * dt / people.dur_hiv[not_art_inds]
-            frac_prognosis = (100*frac_prognosis).astype(hpd.default_int)
-            cd4_change = self.cd4_decline_diff[frac_prognosis]
+            time_with_hiv = ((people.t - people.date_hiv[not_art_inds]) * dt).astype(hpd.default_int)
+            cd4_change = self.cd4_decline_diff[time_with_hiv]
             people.cd4[not_art_inds] += cd4_change
 
             # Now take care of people on ART
@@ -249,7 +252,7 @@ class HIVsim(hpb.ParsObj):
             self.set_hiv_prognoses(people, new_infection_inds, year=year)  # Set ART adherence for those with HIV
 
         self.check_hiv_mortality(people)
-        self.check_cd4(people)
+        self.update_cd4(people)
         self.update_hpv_progs(people)
         self.update_hiv_results(people, new_infection_inds)
 
@@ -289,6 +292,7 @@ class HIVsim(hpb.ParsObj):
         ''' Update people's relative susceptibility, severity, and immunity '''
 
         hiv_inds = sc.autolist()
+
         for sn, cd4state in enumerate(self.cd4states):
             inds = sc.findinds((people.cd4 >= self.cd4_lb[sn]) & (people.cd4 < self.cd4_ub[sn]))
             hiv_inds += list(inds)
