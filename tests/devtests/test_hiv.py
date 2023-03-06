@@ -88,7 +88,8 @@ def test_hiv_epi():
             return
 
     # Define baseline parameters and initialize sim
-    base_pars = dict(n_agents=5e3, n_years=30, dt=0.5, verbose=0, analyzers=hpv.age_causal_infection())
+    base_analyzers = [hpv.age_causal_infection(), hivtest()]
+    base_pars = dict(n_agents=5e3, n_years=30, dt=0.5, verbose=0, analyzers=base_analyzers)
     hiv_settings = dict(model_hiv=True, hiv_datafile=hiv_datafile, art_datafile=art_datafile)
 
     # # Test 1: if HIV mortality is zero, then cancer incidence should be higher with HIV on
@@ -112,7 +113,7 @@ def test_hiv_epi():
 
     # Test 3: with HIV on, use an analyzer to see how many cancers HIV 'averts' by killing people before they develop cancer
 
-    return s2
+    return s0, s1, s2
 
 
 def test_impact_on_cancer():
@@ -216,7 +217,7 @@ if __name__ == '__main__':
     # Start timing and optionally enable interactive plotting
     T = sc.tic()
     # sim = test_hiv()
-    s2 = test_hiv_epi()
+    s0, s1, s2 = test_hiv_epi()
     # sim2 = test_impact_on_cancer()
     # sim3, calib = test_calibration_hiv()
     sc.toc(T)

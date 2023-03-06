@@ -721,13 +721,6 @@ class Sim(hpb.BaseSim):
         trans = np.array([self['transf2m'],self['transm2f']]) # F2M first since that's the order things are done later
         year = self.yearvec[t]
 
-        if (len(self.people)>= 5676) and self.people.infectious[:,5676].any():
-            import traceback;
-            traceback.print_exc();
-            import pdb;
-            pdb.set_trace()
-
-
         # Make HIV-related updates
         if self.pars['model_hiv']:
             self.hivsim.step(people=self.people, year=year)
