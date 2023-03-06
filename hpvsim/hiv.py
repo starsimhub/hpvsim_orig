@@ -181,12 +181,13 @@ class HIVsim(hpb.ParsObj):
             no_art_inds = np.setdiff1d(inds, art_inds)
             assign_dur_inds = np.array(assign_dur_inds.tolist() + no_art_inds.tolist())
 
-        scale = self['hiv_pars']['time_to_hiv_death_scale'](people.age[assign_dur_inds])
-        scale = np.maximum(scale, 0)
-        time_to_hiv_death = weibull_min.rvs(c=shape, scale=scale, size=len(assign_dur_inds))
-        people.dur_hiv[assign_dur_inds] = time_to_hiv_death
-        if self['hiv_pars']['model_hiv_death']:
-            people.date_dead_hiv[assign_dur_inds] = people.t + sc.randround(time_to_hiv_death / dt)
+            if len(assign_dur_inds)>0:
+                scale = self['hiv_pars']['time_to_hiv_death_scale'](people.age[assign_dur_inds])
+                scale = np.maximum(scale, 0)
+                time_to_hiv_death = weibull_min.rvs(c=shape, scale=scale, size=len(assign_dur_inds))
+                people.dur_hiv[assign_dur_inds] = time_to_hiv_death
+                if self['hiv_pars']['model_hiv_death']:
+                    people.date_dead_hiv[assign_dur_inds] = people.t + sc.randround(time_to_hiv_death / dt)
 
         return
 
