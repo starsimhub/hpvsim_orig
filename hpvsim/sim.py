@@ -788,24 +788,24 @@ class Sim(hpb.BaseSim):
                     target_inds   = targets[transmissions] # Extract indices of those who got infected
                     target_inds, unique_inds = np.unique(target_inds, return_index=True)  # Due to multiple partnerships, some people will be counted twice; remove them
                     people.infect(inds=target_inds, g=g, layer=lkey)  # Infect people
-        #
-        # # Determine if there are any reactivated infections on this timestep
-        # for g in range(ng):
-        #     latent_inds = hpu.true(people.latent[g,:])
-        #     if len(latent_inds):
-        #         reactivation_probs = np.full_like(latent_inds, self['hpv_reactivation'] * dt, dtype=hpd.default_float)
-        #
-        #         # if self['model_hiv']:
-        #         #     # determine if any of these inds have HIV and adjust their probs
-        #         #     hiv_latent_inds = latent_inds[hpu.true(people.hiv[latent_inds])]
-        #         #     if len(hiv_latent_inds):
-        #         #         immune_compromise = 1 - people.art_adherence[hiv_latent_inds]
-        #         #         mod = immune_compromise * self['hiv_pars']['reactivation_prob']
-        #         #         mod[mod < 1] = 1
-        #         #         reactivation_probs[hpu.true(people.hiv[latent_inds])] *= mod
-        #         is_reactivated = hpu.binomial_arr(reactivation_probs)
-        #         reactivated_inds = latent_inds[is_reactivated]
-        #         people.infect(inds=reactivated_inds, g=g, layer='reactivation')
+
+        # Determine if there are any reactivated infections on this timestep
+        for g in range(ng):
+            latent_inds = hpu.true(people.latent[g,:])
+            if len(latent_inds):
+                reactivation_probs = np.full_like(latent_inds, self['hpv_reactivation'] * dt, dtype=hpd.default_float)
+
+                # if self['model_hiv']:
+                #     # determine if any of these inds have HIV and adjust their probs
+                #     hiv_latent_inds = latent_inds[hpu.true(people.hiv[latent_inds])]
+                #     if len(hiv_latent_inds):
+                #         immune_compromise = 1 - people.art_adherence[hiv_latent_inds]
+                #         mod = immune_compromise * self['hiv_pars']['reactivation_prob']
+                #         mod[mod < 1] = 1
+                #         reactivation_probs[hpu.true(people.hiv[latent_inds])] *= mod
+                is_reactivated = hpu.binomial_arr(reactivation_probs)
+                reactivated_inds = latent_inds[is_reactivated]
+                people.infect(inds=reactivated_inds, g=g, layer='reactivation')
 
         # Index for results
         idx = int(t / self.resfreq)

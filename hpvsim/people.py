@@ -355,10 +355,6 @@ class People(hpb.BasePeople):
         self.sev[genotype, fg_inds] = hppar.compute_severity(time_with_infection, rel_sev=rel_sevs, pars=gpars['sev_fn'])
         if (np.isnan(self.sev[genotype, fg_inds])).any():
             errormsg = 'Invalid severity values.'
-            import traceback;
-            traceback.print_exc();
-            import pdb;
-            pdb.set_trace()
             raise ValueError(errormsg)
 
         return
