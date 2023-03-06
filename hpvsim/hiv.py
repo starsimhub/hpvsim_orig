@@ -83,14 +83,15 @@ class HIVsim(hpb.ParsObj):
         super().update_pars(pars=old_pars, create=create)
 
     def init_states(self, people):
+        ''' Add HIV-related states to the people states '''
         hiv_states = [
             hpd.State('hiv', bool, False),
             hpd.State('art', bool, False),
-            hpd.State('dead_hiv', bool, False),
         ]
-        people.meta.other_stock_states += hiv_states
-        people.meta.durs    += [hpd.State('dur_hiv',    hpd.default_float, np.nan)]
-        people.meta.person  += [hpd.State('cd4',        hpd.default_float, np.nan)]
+        people.meta.other_stock_states  += hiv_states
+        people.meta.durs                += [hpd.State('dur_hiv',    hpd.default_float,  np.nan)]
+        people.meta.person              += [hpd.State('cd4',        hpd.default_float,  np.nan)]
+        people.meta.alive_states        += hpd.State('dead_hiv',    bool,               False),
 
         return
 
@@ -197,10 +198,7 @@ class HIVsim(hpb.ParsObj):
         filter_inds = people.true('hiv')
         inds = people.check_inds(people.dead_hiv, people.date_dead_hiv, filter_inds=filter_inds)
         people.remove_people(inds, cause='hiv')
-
-        # Remove / negate all HIV related states
-        people['hiv'][inds] = False
-        people['hiv'][inds] = False
+        print(f'Removed {inds} dying of HIV')
 
         return
 
@@ -354,6 +352,7 @@ class HIVsim(hpb.ParsObj):
             self.results['n_females_no_hiv_alive_by_age'][:, idx] = np.histogram(people.age[alive_female_no_hiv_inds], bins=people.age_bins,
                  weights=people.scale[alive_female_no_hiv_inds])[0]
         return
+
 
     def get_hiv_data(self, hiv_datafile=None, art_datafile=None):
         '''

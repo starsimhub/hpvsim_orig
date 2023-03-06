@@ -721,6 +721,13 @@ class Sim(hpb.BaseSim):
         trans = np.array([self['transf2m'],self['transm2f']]) # F2M first since that's the order things are done later
         year = self.yearvec[t]
 
+        if (len(self.people)>= 5676) and self.people.infectious[:,5676].any():
+            import traceback;
+            traceback.print_exc();
+            import pdb;
+            pdb.set_trace()
+
+
         # Make HIV-related updates
         if self.pars['model_hiv']:
             self.hivsim.step(people=self.people, year=year)
@@ -788,24 +795,24 @@ class Sim(hpb.BaseSim):
                     target_inds   = targets[transmissions] # Extract indices of those who got infected
                     target_inds, unique_inds = np.unique(target_inds, return_index=True)  # Due to multiple partnerships, some people will be counted twice; remove them
                     people.infect(inds=target_inds, g=g, layer=lkey)  # Infect people
-
-        # Determine if there are any reactivated infections on this timestep
-        for g in range(ng):
-            latent_inds = hpu.true(people.latent[g,:])
-            if len(latent_inds):
-                reactivation_probs = np.full_like(latent_inds, self['hpv_reactivation'] * dt, dtype=hpd.default_float)
-
-                # if self['model_hiv']:
-                #     # determine if any of these inds have HIV and adjust their probs
-                #     hiv_latent_inds = latent_inds[hpu.true(people.hiv[latent_inds])]
-                #     if len(hiv_latent_inds):
-                #         immune_compromise = 1 - people.art_adherence[hiv_latent_inds]
-                #         mod = immune_compromise * self['hiv_pars']['reactivation_prob']
-                #         mod[mod < 1] = 1
-                #         reactivation_probs[hpu.true(people.hiv[latent_inds])] *= mod
-                is_reactivated = hpu.binomial_arr(reactivation_probs)
-                reactivated_inds = latent_inds[is_reactivated]
-                people.infect(inds=reactivated_inds, g=g, layer='reactivation')
+        #
+        # # Determine if there are any reactivated infections on this timestep
+        # for g in range(ng):
+        #     latent_inds = hpu.true(people.latent[g,:])
+        #     if len(latent_inds):
+        #         reactivation_probs = np.full_like(latent_inds, self['hpv_reactivation'] * dt, dtype=hpd.default_float)
+        #
+        #         # if self['model_hiv']:
+        #         #     # determine if any of these inds have HIV and adjust their probs
+        #         #     hiv_latent_inds = latent_inds[hpu.true(people.hiv[latent_inds])]
+        #         #     if len(hiv_latent_inds):
+        #         #         immune_compromise = 1 - people.art_adherence[hiv_latent_inds]
+        #         #         mod = immune_compromise * self['hiv_pars']['reactivation_prob']
+        #         #         mod[mod < 1] = 1
+        #         #         reactivation_probs[hpu.true(people.hiv[latent_inds])] *= mod
+        #         is_reactivated = hpu.binomial_arr(reactivation_probs)
+        #         reactivated_inds = latent_inds[is_reactivated]
+        #         people.infect(inds=reactivated_inds, g=g, layer='reactivation')
 
         # Index for results
         idx = int(t / self.resfreq)
@@ -845,7 +852,7 @@ class Sim(hpb.BaseSim):
             cin3inds = hpu.true(people['cin3'])
             self.results[f'n_cin3_by_age'][:, idx] = np.histogram(people.age[cin3inds], bins=people.age_bins, weights=people.scale[cin3inds])[0]
             # Create total stocks
-            for key in hpd.total_stock_keys:
+            for key in self.people.meta.genotype_stock_keys:
 
                 # Stocks by genotype
                 for g in range(ng):
@@ -860,7 +867,7 @@ class Sim(hpb.BaseSim):
                     self.results[f'n_{key}'][idx] = people.count(key)
 
             # Create stocks of interventions
-            for key in [state.name for state in hpd.PeopleMeta.intv_states]:
+            for key in self.people.meta.intv_stock_keys:
                 self.results[f'n_{key}'][idx] = people.count(key)
 
             # Update cancers and cancers by age

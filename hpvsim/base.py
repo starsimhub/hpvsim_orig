@@ -933,7 +933,7 @@ class BasePeople(FlexPretty):
 
     def initialize(self):
         ''' Initialize underlying storage and map arrays '''
-        for state in self.meta.all_states:
+        for state in self.meta.states_to_set:
             self._data[state.name] = state.new(self.pars, self._n)
         self._map_arrays()
         self['uid'][:] = np.arange(self.pars['n_agents'])
@@ -1057,7 +1057,7 @@ class BasePeople(FlexPretty):
         new_total = orig_n + n
         if new_total > self._s:
             n_new = max(n, int(self._s / 2))  # Minimum 50% growth
-            for state in self.meta.all_states:
+            for state in self.meta.states_to_set:
                 self._data[state.name] = np.concatenate([self._data[state.name], state.new(self.pars, n_new)], axis=self._data[state.name].ndim-1)
             self._s += n_new
         self._n += n
@@ -1474,8 +1474,8 @@ class BasePeople(FlexPretty):
         return out
 
     def keys(self):
-        ''' Returns keys for all properties of the people object '''
-        return [state.name for state in self.meta.all_states]
+        ''' Returns keys for all non-derived properties of the people object '''
+        return [state.name for state in self.meta.states_to_set]
 
     def person_keys(self):
         ''' Returns keys specific to a person (e.g., their age) '''

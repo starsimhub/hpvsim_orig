@@ -135,7 +135,7 @@ class PeopleMeta(sc.prettyobj):
         # Additional intervention states
         self.intv_states = [
             State('detected_cancer',    bool,   False, label='Number with detected cancer'), # Whether the person's cancer has been detected
-            State('screened',           bool,   False, label='Number screend'), # Whether the person has been screened (how does this change over time?)
+            State('screened',           bool,   False, label='Number screened'), # Whether the person has been screened (how does this change over time?)
             State('cin_treated',        bool,   False, label='Number treated for precancerous lesions'), # Whether the person has been treated for CINs
             State('cancer_treated',     bool,   False, label='Number treated for cancer'), # Whether the person has been treated for cancer
             State('vaccinated',         bool,   False, label='Number vaccinated'), # Whether the person has received the prophylactic vaccine
@@ -207,7 +207,7 @@ class PeopleMeta(sc.prettyobj):
     # States to set - same as above but does not include derived states
     @property
     def states_to_set(self):
-        return self.person + self.alive_states + self.viral_states + self.cell_states + self.intv_states + self.other_stock_states + self.imm_states + self.rship_states + self.durs
+        return self.person + self.alive_states + self.viral_states + self.cell_states + self.intv_states + self.other_stock_states + self.imm_states + self.rship_states + self.durs + self.dates
 
     @property
     def stock_keys(self):
@@ -222,12 +222,16 @@ class PeopleMeta(sc.prettyobj):
         return [state.color for state in self.stock_states]
 
     @property
-    def total_stock_keys(self):
+    def genotype_stock_keys(self):
         return [state.name for state in self.stock_states if state.shape=='n_genotypes']
 
     @property
     def other_stock_keys(self):
-        return [state.name for state in intv_states]
+        return [state.name for state in self.other_stock_states]
+
+    @property
+    def intv_stock_keys(self):
+        return [state.name for state in self.intv_states]
 
 
     def validate(self):

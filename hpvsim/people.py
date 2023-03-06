@@ -348,10 +348,17 @@ class People(hpb.BasePeople):
         if (time_with_infection<0).any():
             errormsg = 'Time with infection cannot be less than zero.'
             raise ValueError(errormsg)
+        if (np.isnan(self.date_exposed[genotype, fg_inds])).any():
+            errormsg = f'No date of exposure defined for {hpu.iundefined(self.date_exposed[genotype, fg_inds],fg_inds)} on timestep {self.t}'
+            raise ValueError(errormsg)
 
         self.sev[genotype, fg_inds] = hppar.compute_severity(time_with_infection, rel_sev=rel_sevs, pars=gpars['sev_fn'])
         if (np.isnan(self.sev[genotype, fg_inds])).any():
             errormsg = 'Invalid severity values.'
+            import traceback;
+            traceback.print_exc();
+            import pdb;
+            pdb.set_trace()
             raise ValueError(errormsg)
 
         return
@@ -834,16 +841,11 @@ class People(hpb.BasePeople):
 
         # Set states to false
         self.alive[inds] = False
-
-        import traceback;
-        traceback.print_exc();
-        import pdb;
-        pdb.set_trace()
-
-        # Add to stocks
-        for state in hpd.total_stock_keys:
+        for state in self.meta.genotype_stock_keys:
             self[state][:, inds] = False
-        for state in hpd.other_stock_keys:
+        for state in self.meta.intv_stock_keys:
+            self[state][inds] = False
+        for state in self.meta.other_stock_keys:
             self[state][inds] = False
 
         # Wipe future dates
