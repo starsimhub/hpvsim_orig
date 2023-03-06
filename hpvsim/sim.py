@@ -844,6 +844,7 @@ class Sim(hpb.BaseSim):
             self.results[f'n_cin2_by_age'][:, idx] = np.histogram(people.age[cin2inds], bins=people.age_bins, weights=people.scale[cin2inds])[0]
             cin3inds = hpu.true(people['cin3'])
             self.results[f'n_cin3_by_age'][:, idx] = np.histogram(people.age[cin3inds], bins=people.age_bins, weights=people.scale[cin3inds])[0]
+
             # Create total stocks
             for key in self.people.meta.genotype_stock_keys:
 
