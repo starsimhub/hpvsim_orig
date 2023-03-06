@@ -59,9 +59,9 @@ class HIVsim(hpb.ParsObj):
         self.update_pars(old_pars=pars, new_pars=hiv_pars, create=True)
         self.init_results(sim)
 
-        # y = np.linspace(0,1,101)
-        # cd4_decline = self['hiv_pars']['cd4_trajectory'](y)
-        # self.cd4_decline_diff = np.diff(cd4_decline)
+        y = np.linspace(0,1,101)
+        cd4_decline = self['hiv_pars']['cd4_trajectory'](y)
+        self.cd4_decline_diff = np.diff(cd4_decline)
 
         return
 
@@ -82,19 +82,16 @@ class HIVsim(hpb.ParsObj):
         # Call update_pars() for ParsObj
         super().update_pars(pars=old_pars, create=create)
 
-    @staticmethod
-    def init_states(people):
+    def init_states(self, people):
         hiv_states = [
-            hpd.State('cd4', hpd.default_float, np.nan),
             hpd.State('hiv', bool, False),
             hpd.State('art', bool, False),
-            hpd.State('date_hiv', hpd.default_float, np.nan),
-            hpd.State('date_art', hpd.default_float, np.nan),
-            hpd.State('date_dead_hiv', hpd.default_float, np.nan),
             hpd.State('dead_hiv', bool, False),
-            hpd.State('dur_hiv', hpd.default_float, np.nan),
         ]
-        people.meta.all_states += hiv_states
+        people.meta.other_stock_states += hiv_states
+        people.meta.durs    += [hpd.State('dur_hiv',    hpd.default_float, np.nan)]
+        people.meta.person  += [hpd.State('cd4',        hpd.default_float, np.nan)]
+
         return
 
 
@@ -111,14 +108,16 @@ class HIVsim(hpb.ParsObj):
 
         na = len(sim['age_bins']) - 1  # Number of age bins
 
-        stock_colors = [i for i in set(hpd.stock_colors) if i is not None]
+        stock_colors = [i for i in set(sim.people.meta.stock_colors) if i is not None]
 
-        results['hiv_infections'] = init_res('Number HIV infections')
-        results['hiv_infections_by_age'] = init_res('Number HIV infections by age', n_rows=na, color=stock_colors[0])
+        results['hiv_infections'] = init_res('New HIV infections')
+        results['hiv_infections_by_age'] = init_res('New HIV infections by age', n_rows=na, color=stock_colors[0])
         results['n_hiv'] = init_res('Number living with HIV', color=stock_colors[0])
         results['n_hiv_by_age'] = init_res('Number living with HIV by age', n_rows=na, color=stock_colors[0])
         results['hiv_prevalence'] = init_res('HIV prevalence', color=stock_colors[0])
         results['hiv_prevalence_by_age'] = init_res('HIV prevalence by age', n_rows=na, color=stock_colors[0])
+        results['hiv_deaths'] = init_res('New HIV deaths')
+        results['hiv_deaths_by_age'] = init_res('New HIV deaths by age', n_rows=na, color=stock_colors[0])
         results['hiv_incidence'] = init_res('HIV incidence', color=stock_colors[0])
         results['hiv_incidence_by_age'] = init_res('HIV incidence by age', n_rows=na, color=stock_colors[0])
         results['n_hpv_by_age_with_hiv'] = init_res('Number HPV infections by age among HIV+', n_rows=na, color=stock_colors[0])
@@ -174,38 +173,35 @@ class HIVsim(hpb.ParsObj):
         art_failure_bools = hpu.binomial_arr(art_failure_probs)
         art_failure_inds = art_inds[art_failure_bools]
 
-        # Get indices of those to assign death dates for, if we are modeling HIV death
-        assign_death_inds = art_failure_inds # Assign death to those not with ART failure
+        # Get indices of those to assign durations for -- TODO, why not everyone?
+        assign_dur_inds = art_failure_inds # Assign death to those not with ART failure
 
         if incident: # Additionally, assign death to those who never go on ART
             no_art_inds = np.setdiff1d(inds, art_inds)
-            assign_death_inds = np.array(assign_death_inds.tolist() + no_art_inds.tolist())
+            assign_dur_inds = np.array(assign_dur_inds.tolist() + no_art_inds.tolist())
 
-        scale = self['hiv_pars']['time_to_hiv_death_scale'](people.age[assign_death_inds])
+        scale = self['hiv_pars']['time_to_hiv_death_scale'](people.age[assign_dur_inds])
         scale = np.maximum(scale, 0)
-        time_to_hiv_death = weibull_min.rvs(c=shape, scale=scale, size=len(assign_death_inds))
-        people.dur_hiv[assign_death_inds] = time_to_hiv_death
+        time_to_hiv_death = weibull_min.rvs(c=shape, scale=scale, size=len(assign_dur_inds))
+        people.dur_hiv[assign_dur_inds] = time_to_hiv_death
         if self['hiv_pars']['model_hiv_death']:
-            people.date_dead_hiv[assign_death_inds] = people.t + sc.randround(time_to_hiv_death / dt)
-
-        # If we're not modeling HIV death, just set duration of HIV is just the length of the person's life
-        # else:
-        #     import traceback;
-        #     traceback.print_exc();
-        #     import pdb;
-        #     pdb.set_trace()
+            people.date_dead_hiv[assign_dur_inds] = people.t + sc.randround(time_to_hiv_death / dt)
 
         return
 
 
-    def check_hiv_mortality(self, people):
+    def check_hiv_death(self, people):
         '''
         Check for new deaths from HIV
         '''
         filter_inds = people.true('hiv')
         inds = people.check_inds(people.dead_hiv, people.date_dead_hiv, filter_inds=filter_inds)
         people.remove_people(inds, cause='hiv')
+
+        # Remove / negate all HIV related states
         people['hiv'][inds] = False
+        people['hiv'][inds] = False
+
         return
 
 
@@ -220,9 +216,10 @@ class HIVsim(hpb.ParsObj):
             not_art_inds = filter_inds[hpu.false(people.art[filter_inds])]
 
             # First take care of people not on ART
-            time_with_hiv = ((people.t - people.date_hiv[not_art_inds]) * dt).astype(hpd.default_int)
-            cd4_change = self.cd4_decline_diff[time_with_hiv]
-            people.cd4[not_art_inds] += cd4_change
+            cd4_remaining_inds = hpu.itrue(((people.t - people.date_hiv[not_art_inds]) * dt) < people.dur_hiv[not_art_inds], not_art_inds)
+            frac_prognosis = 100*((people.t - people.date_hiv[cd4_remaining_inds]) * dt) / people.dur_hiv[cd4_remaining_inds]
+            cd4_change = self.cd4_decline_diff[frac_prognosis.astype(hpd.default_int)]
+            people.cd4[cd4_remaining_inds] += cd4_change
 
             # Now take care of people on ART
             mpy = 12
@@ -251,7 +248,7 @@ class HIVsim(hpb.ParsObj):
         if len(new_infection_inds):
             self.set_hiv_prognoses(people, new_infection_inds, year=year)  # Set ART adherence for those with HIV
 
-        self.check_hiv_mortality(people)
+        self.check_hiv_death(people)
         self.update_cd4(people)
         self.update_hpv_progs(people)
         self.update_hiv_results(people, new_infection_inds)
@@ -327,7 +324,7 @@ class HIVsim(hpb.ParsObj):
             self.results['n_hiv_by_age'][:, idx] = np.histogram(people.age[hivinds], bins=people.age_bins, weights=people.scale[hivinds])[0]
 
             # Pull out those on ART:
-            self.results['n_art'][idx] = people.count('art')
+            self.results['n_art'][idx] = people.count('art') # TODO: should this be scaled?
 
             # Pull out those with HPV and HIV+
             hpvhivinds = hpu.true((people['hiv']) & people['infectious'])

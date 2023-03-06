@@ -418,7 +418,7 @@ class Sim(hpb.BaseSim):
             results[flow.name+'_by_age']        = init_res(flow.label+' by age', n_rows=na, color=flow.color)
 
         # Create stocks
-        for stock in hpd.PeopleMeta.stock_states:
+        for stock in hpd.PeopleMeta().stock_states:
             results[f'n_{stock.name}']              = init_res(stock.label, color=stock.color)
             results[f'n_{stock.name}_by_genotype']  = init_res(stock.label+' by genotype', n_rows=ng)
 
@@ -449,7 +449,7 @@ class Sim(hpb.BaseSim):
         results['asr_cancer_incidence'] = init_res('Age-adjusted cervical cancer incidence', scale=False)
         results['asr_cancer_mortality'] = init_res('Age-adjusted cervical cancer mortality', scale=False)
 
-        stock_colors = [i for i in set(hpd.stock_colors) if i is not None]
+        stock_colors = [i for i in set(hpd.PeopleMeta().stock_colors) if i is not None]
 
         # Type distributions by cytology
         for var, name in zip(hpd.type_dist_keys, hpd.type_dist_names):

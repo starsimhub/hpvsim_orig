@@ -827,13 +827,20 @@ class People(hpb.BasePeople):
         elif cause == 'emigration':
             self.emigrated[inds] = True
         elif cause == 'hiv':
-            pass # handled by hivsim
+            self.dead_hiv[inds] = True
         else:
-            errormsg = f'Cause of death must be one of "other", "cancer", or "emigration", not {cause}.'
+            errormsg = f'Cause of death must be one of "other", "cancer", "emigration", or "hiv", not {cause}.'
             raise ValueError(errormsg)
 
         # Set states to false
         self.alive[inds] = False
+
+        import traceback;
+        traceback.print_exc();
+        import pdb;
+        pdb.set_trace()
+
+        # Add to stocks
         for state in hpd.total_stock_keys:
             self[state][:, inds] = False
         for state in hpd.other_stock_keys:

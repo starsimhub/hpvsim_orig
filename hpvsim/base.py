@@ -910,7 +910,7 @@ class BasePeople(FlexPretty):
         ''' Initialize essential attributes used for filtering '''
         
         # Set meta attribute here, because BasePeople methods expect it to exist
-        self.meta = hpd.PeopleMeta  # Store list of keys and dtypes
+        self.meta = hpd.PeopleMeta()  # Store list of keys and dtypes
         self.meta.validate()
 
         # Define lock attribute here, since BasePeople.lock()/unlock() requires it
