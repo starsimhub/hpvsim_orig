@@ -82,7 +82,8 @@ class HIVsim(hpb.ParsObj):
         # Call update_pars() for ParsObj
         super().update_pars(pars=old_pars, create=create)
 
-    def init_states(self, people):
+    @staticmethod
+    def init_states(people):
         ''' Add HIV-related states to the people states '''
         hiv_states = [
             hpd.State('hiv', bool, False),

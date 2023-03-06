@@ -290,13 +290,6 @@ flows = [
 flow_keys           = [flow.name for flow in flows]
 genotype_flow_keys  = [flow.name for flow in flows if flow.by_genotype]
 
-# # Stocks: the number in each of the following states
-# # All are stored (1) by genotype and (2) as the total across genotypes
-# stock_keys   = [state.name for state in PeopleMeta.stock_states]
-# stock_names  = [state.label for state in PeopleMeta.stock_states]
-# stock_colors = [state.color for state in PeopleMeta.stock_states]
-# total_stock_keys = [state.name for state in PeopleMeta.stock_states if state.shape=='n_genotypes']
-# other_stock_keys = [state.name for state in PeopleMeta.intv_states]
 
 # Incidence. Strong overlap with stocks, but with slightly different naming conventions
 # All are stored (1) by genotype and (2) as the total across genotypes
