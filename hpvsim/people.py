@@ -234,7 +234,7 @@ class People(hpb.BasePeople):
         dur_episomal = self.dur_episomal[g, inds]
         dur_cin = self.dur_cin[g, inds]
         if set_sev: self.sev[g, inds] = 0 # Severity starts at 0 on day 1 of infection
-        sevs = hppar.compute_severity(dur_cin, rel_sev=self.rel_sev[inds], pars=gpars['sev_fn'])  # Calculate maximal severity
+        total_sevs = hppar.compute_severity(dur_cin, rel_sev=self.rel_sev[inds], pars=gpars['sev_fn'], total=True)  # Calculate maximal severity
 
         # Now figure out probabilities of cellular transformations preceding cancer, based on this severity level
         transform_prob_par = gpars['transform_prob'] # Pull out the genotype-specific parameter governing the probability of transformation
@@ -243,13 +243,13 @@ class People(hpb.BasePeople):
 
         # Non-multiscale version
         if n_extra == 1:
-            transform_prob_arr = hpu.transform_prob(transform_prob_par, sevs)
+            transform_prob_arr = hpu.transform_prob(transform_prob_par, total_sevs)
 
         # Multiscale version
         elif n_extra > 1:
 
             # Firstly, determine who will transform based on severity values, and scale them to create more agents
-            transform_probs = hpu.transform_prob(transform_prob_par, sevs) # Use this to determine probability of transformation
+            transform_probs = hpu.transform_prob(transform_prob_par, total_sevs) # Use this to determine probability of transformation
             is_transform = hpu.binomial_arr(transform_probs) # Select who transforms - NB, this array gets extended later
             transform_inds = inds[is_transform] # Indices of those who transform
             self.scale[transform_inds] = cancer_scale  # Shrink the weight of the original agents, but otherwise leave them the same
@@ -261,10 +261,11 @@ class People(hpb.BasePeople):
             extra_dur_cin = np.maximum(extra_dur_episomal - extra_dur_precin, 0)
 
             extra_rel_sevs = hpu.sample(**self.pars['sev_dist'], size=full_size)
-            extra_sev = hppar.compute_severity(extra_dur_cin, rel_sev=extra_rel_sevs, pars=gpars['sev_fn'])  # Calculate maximal severity
+            extra_total_sev = hppar.compute_severity(extra_dur_cin.flatten(), rel_sev=extra_rel_sevs.flatten(), pars=gpars['sev_fn'], total=True)  # Calculate maximal severity
+            extra_total_sev = extra_total_sev.reshape(full_size)
 
             # Based on the extra severity values, determine additional transformation probabilities
-            extra_transform_probs = hpu.transform_prob(transform_prob_par, extra_sev[:, 1:])
+            extra_transform_probs = hpu.transform_prob(transform_prob_par, extra_total_sev[:, 1:])
             extra_transform_bools = hpu.binomial_arr(extra_transform_probs)
             extra_transform_bools *= self.level0[inds, None]  # Don't allow existing cancer agents to make more cancer agents
             extra_transform_counts = extra_transform_bools.sum(axis=1)  # Find out how many new cancer cases we have

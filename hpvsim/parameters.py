@@ -10,6 +10,7 @@ from . import misc as hpm
 from . import utils as hpu
 from . import defaults as hpd
 from .data import loaders as hpdata
+from scipy.integrate import quad
 
 __all__ = ['make_pars', 'reset_layer_pars']
 
@@ -581,7 +582,7 @@ def get_vaccine_dose_pars(default=False, vaccine=None):
 
 #%% Methods for computing severity
 
-def compute_severity(t, rel_sev=None, pars=None):
+def compute_severity(t, rel_sev=None, pars=None, total=False):
     '''
     Process functional form and parameters into values:
     '''
@@ -599,10 +600,17 @@ def compute_severity(t, rel_sev=None, pars=None):
 
     # Process inputs
     if form is None or form == 'logf2':
-        output = hpu.logf2(t, **pars)
+        if not total:
+            output = hpu.logf2(t, **pars)
 
     elif form == 'logf3':
-        output = hpu.logf3(t, **pars)
+        if not total:
+            output = hpu.logf3(t, **pars)
+        else:
+            output = np.zeros_like(t)
+            for ti,tval in enumerate(t):
+                if tval>1e-5:
+                    output[ti] = quad(hpu.logf3, 0, tval, args=tuple(pars.values()))[0]
 
     elif callable(form):
         output = form(t, **pars)
