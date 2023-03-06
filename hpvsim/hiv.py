@@ -119,7 +119,6 @@ class HIVsim(hpb.ParsObj):
         results['hiv_prevalence_by_age'] = init_res('HIV prevalence by age', n_rows=na, color=stock_colors[0])
         results['hiv_deaths'] = init_res('New HIV deaths')
         results['hiv_deaths_by_age'] = init_res('New HIV deaths by age', n_rows=na, color=stock_colors[0])
-        results['averted_cancers'] = init_res('Cancers averted by HIV death')
         results['hiv_incidence'] = init_res('HIV incidence', color=stock_colors[0])
         results['hiv_incidence_by_age'] = init_res('HIV incidence by age', n_rows=na, color=stock_colors[0])
         results['n_hpv_by_age_with_hiv'] = init_res('Number HPV infections by age among HIV+', n_rows=na, color=stock_colors[0])
@@ -199,15 +198,9 @@ class HIVsim(hpb.ParsObj):
         filter_inds = people.true('hiv')
         inds = people.check_inds(people.dead_hiv, people.date_dead_hiv, filter_inds=filter_inds)
 
-        # Determine how many of these were set to develop cancer
-        idx = int(people.t / self.resfreq)
-        for g in range(people.pars['n_genotypes']):
-            averted_cancers = hpu.idefinedi(people.date_cancerous[g,:], inds)
-            if len(averted_cancers)>0:
-                self.results['averted_cancers'][idx] = people.scale_flows(averted_cancers)
-
-        # Now remove people and update flows
+        # Remove people and update flows
         people.remove_people(inds, cause='hiv')
+        idx = int(people.t / self.resfreq)
         if len(inds):
             deaths_by_age = np.histogram(people.age[inds], bins=people.age_bins, weights=people.scale[inds])[0]
             self.results['hiv_deaths'][idx] += people.scale_flows(inds)
