@@ -72,28 +72,19 @@ def test_hiv():
 def test_hiv_epi():
     ''' Run various epi tests for HIV '''
 
-    class hivtest(hpv.Analyzer):
-        ''' Analyzer to count how many cancers HIV "averts" '''
-
-        def initialize(self, sim):
-            super().initialize()
-            self.label = sim.label
-            self.averted_cancers = np.zeros_like(sim.res_tvec)
-            return
-
-        def apply(self, sim):
-            ppl = sim.people
-            idx = int(sim.t / sim.resfreq)
-            self.averted_cancers[idx] += 3
-            return
-
     # Define baseline parameters and initialize sim
-    base_analyzers = [hpv.age_causal_infection(), hivtest()]
-    base_pars = dict(n_agents=5e3, n_years=30, dt=0.5, verbose=0, analyzers=base_analyzers)
+    base_pars = dict(
+        n_agents=5e3,
+        n_years=30,
+        dt=0.5,
+        verbose=0,
+        sev_dist=dict(dist='normal_pos', par1=1.0, par2=0), # Remove variance from relative severity, so everone gets a value of 1
+        analyzers=hpv.age_causal_infection()
+    )
     hiv_settings = dict(model_hiv=True, hiv_datafile=hiv_datafile, art_datafile=art_datafile)
 
     # # Test 1: if HIV mortality is zero, then cancer incidence should be higher with HIV on
-    # s0 = hpv.Sim(pars=base_pars, label='No HIV').run()
+    s0 = hpv.Sim(pars=base_pars, label='No HIV').run()
     # s1 = hpv.Sim(pars=base_pars, **hiv_settings, hiv_pars={'model_hiv_death':False}, label='HIV without mortality').run()
     #
     # var = 'cancers'
@@ -104,16 +95,30 @@ def test_hiv_epi():
     # print(f'✓ ({v0} <= {v1})')
 
     # Test 2: with HIV on, the average age of cancer should be younger
-    s2 = hpv.Sim(pars=base_pars, **hiv_settings, label='With HIV').run()
+    # s2 = hpv.Sim(pars=base_pars, **hiv_settings, label='With HIV').run()
     # age_cancer_0 = np.mean(s0.get_analyzer().age_cancer)
     # age_cancer_2 = np.mean(s2.get_analyzer().age_cancer)
     # print(f'Checking mean age of cancer with sim "{s0.label}" vs "{s1.label}', end='')
     # assert age_cancer_2 <= age_cancer_0, f'Expected mean age of cancer to be younger in sim "{s2.label}" than in sim "{s0.label}", but {age_cancer_2} > {age_cancer_0})'
     # print(f'✓ ({age_cancer_2} <= {age_cancer_0})')
 
-    # Test 3: with HIV on, use an analyzer to see how many cancers HIV 'averts' by killing people before they develop cancer
+    # Test 3: with HIV on but with no impact on HPV, see how many cancers HIV 'averts' by killing people before they develop cancer
+    hiv_pars = {
+        'rel_sus': {'lt200': 1, 'gt200': 1},
+        'rel_sev': {'lt200': 1, 'gt200': 1},
+        'rel_imm': {'lt200': 1, 'gt200': 1},
+        }
+    s3 = hpv.Sim(pars=base_pars, **hiv_settings, label='HIV without HPV impact').run()
 
-    return s0, s1, s2
+    var = 'cancers'
+    v0 = s0.results[var][:].sum()
+    v3 = s3.results[var][:].sum()
+    print(f'Checking {var:10s} with sim "{s0.label}" vs "{s3.label}"... ', end='')
+    assert v3 <= v0, f'Expected {var} to be lower in sim "{s0.label}" than in sim "{s3.label}", but {v3} > {v0})'
+    print(f'✓ ({v3} <= {v0})')
+
+
+    return s0, s3
 
 
 def test_impact_on_cancer():
@@ -217,7 +222,7 @@ if __name__ == '__main__':
     # Start timing and optionally enable interactive plotting
     T = sc.tic()
     # sim = test_hiv()
-    s0, s1, s2 = test_hiv_epi()
+    s0, s2 = test_hiv_epi()
     # sim2 = test_impact_on_cancer()
     # sim3, calib = test_calibration_hiv()
     sc.toc(T)
