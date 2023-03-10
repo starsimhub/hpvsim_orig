@@ -77,7 +77,7 @@ def invlogf1(y, k):
     return (-1/k)*np.log(2/(y + 1) - 1)
 
 
-def logf2(x, x_infl, k):
+def logf2(x, k, x_infl):
     '''
     Logistic function, constrained to pass through 0,0 and with upper asymptote
     at 1. Accepts 2 parameters: growth rate and point of inflection.
@@ -85,7 +85,7 @@ def logf2(x, x_infl, k):
     l_asymp = -1/(1+np.exp(k*x_infl))
     return l_asymp + 1/( 1 + np.exp(-k*(x-x_infl)))
 
-def get_asymptotes(x_infl, k, ttc=25, s=1):
+def get_asymptotes(k, x_infl, ttc=25, s=1):
     term1 = (1 + np.exp(k*(x_infl-ttc)))**s # Note, this is 1 for most parameter combinations
     term2 = (1 + np.exp(k*x_infl))**s
     u_asymp_num = term1*(1-term2)
@@ -94,12 +94,12 @@ def get_asymptotes(x_infl, k, ttc=25, s=1):
     l_asymp = term1 / (term1 - term2)
     return l_asymp, u_asymp
 
-def logf3(x, x_infl, k, ttc=25, s=1):
-    l_asymp, u_asymp = get_asymptotes(x_infl, k, ttc, s)
+def logf3(x, k, x_infl, ttc=25, s=1):
+    l_asymp, u_asymp = get_asymptotes(k, x_infl, ttc, s)
     return np.minimum(1, l_asymp + (u_asymp-l_asymp)/(1+np.exp(k*(x_infl-x)))**s)
 
-def invlogf3(y, x_infl, k, ttc=25, s=1):
-    l_asymp, u_asymp = get_asymptotes(x_infl, k, ttc, s)
+def invlogf3(y, k, x_infl, ttc=25, s=1):
+    l_asymp, u_asymp = get_asymptotes(k, x_infl, ttc, s)
     part1 = np.log((u_asymp-l_asymp)/(y-l_asymp))/s
     part2 = np.log(np.exp(part1)-1)
     final = 1/k * (k*x_infl - part2)
@@ -111,7 +111,6 @@ def indef_int_logf3(x, k, x_infl, ttc, s=1):
     return num/denom
 
 def intlogf3(upper, k, x_infl, ttc, s=1):
-
     val_at_0    = indef_int_logf3(0, k, x_infl, ttc)
     val_at_lim  = indef_int_logf3(upper, k, x_infl, ttc)
     integral    = val_at_lim-val_at_0
