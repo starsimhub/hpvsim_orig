@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     fig, axes = pl.subplots(3, 1, figsize=(8, 12))
     colors = sc.gridcolors(10)
-    dt = 0.1
+    dt = 0.01
     t = np.arange(0,30,dt) # Array of years
     x_infl = 7 # Fix point of inflection
     ttc = 15
