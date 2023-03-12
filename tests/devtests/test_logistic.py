@@ -34,7 +34,7 @@ if __name__ == '__main__':
     t = np.arange(0,30,dt) # Array of years
     x_infl = 7 # Fix point of inflection
     ttc = 15
-    tp = 5 / 1e5
+    tp = 5 / 1e3
     s = 1
     rel_sev=1
     # Try different growth rates:
