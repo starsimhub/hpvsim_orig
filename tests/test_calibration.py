@@ -75,7 +75,7 @@ if __name__ == '__main__':
     yind = sc.findinds(sim.results['year'], year)[0]
     calib_cancer_results = calib.analyzer_results[best_run]['cancers'][2019]
     sim_cancer_results = sim.results['cancers_by_age'][:, yind]
-    # np.allclose(calib_cancer_results,sim_cancer_results) # THESE SHOULD BE THE SAME -- WHY AREN'T THEY??
+    assert np.allclose(calib_cancer_results,sim_cancer_results) # THESE SHOULD BE THE SAME -- WHY AREN'T THEY??
 
     # Loading the sim saved during calibration and check that the results there are the same
     calib_sim = sc.load(f'sim{best_run}.obj')
@@ -88,8 +88,8 @@ if __name__ == '__main__':
     rerun_sim = hpv.Sim(pars=calib_sim_pars, analyzers=[hpv.snapshot(timepoints=['1980'])])
     rerun_sim.run()
     rerun_sim_cancer_results = rerun_sim.results['cancers_by_age'][:, yind]
-    assert np.allclose(rerun_sim_cancer_results, sim_cancer_results)  # THIS WORKS
-    # assert np.allclose(calib_sim_cancer_results, rerun_sim_cancer_results)  # THIS DOESN'T
+    # assert np.allclose(rerun_sim_cancer_results, sim_cancer_results)  # THIS WORKS
+    assert np.allclose(calib_sim_cancer_results, rerun_sim_cancer_results)  # THIS DOESN'T
 
     # Compare people -- can see that pplsim['infectious'] and pplcalib_sim['infectious']
     # are different from the start, including different lengths
