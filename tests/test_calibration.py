@@ -7,9 +7,9 @@ import sciris as sc
 import hpvsim as hpv
 import numpy as np
 
-do_plot = 1
+do_plot = 0
 do_save = 0
-n_agents = 2e3
+n_agents = 5e3
 
 
 #%% Define the tests
@@ -29,14 +29,14 @@ def test_calibration():
     sim = hpv.Sim(pars, analyzers=[hpv.snapshot(timepoints=['1980'])])
     calib_pars = dict(
         beta=[0.5, 0.3, 0.8],
-        dur_transformed=dict(par1=[5, 3, 10]),
+        dur_transformed=dict(par1=[5, 1, 10]),
     )
     genotype_pars = dict(
         hpv16=dict(
-            sev_fn=dict(k=[0.5, 0.2, 1.0]),
+            sev_fn=dict(k=[0.5, 0.1, 1.0]),
             ),
         hpv18=dict(
-            sev_fn=dict(k=[0.5, 0.2, 1.0]),
+            sev_fn=dict(k=[0.5, 0.1, 1.0]),
         )
     )
 
@@ -48,16 +48,18 @@ def test_calibration():
                                 'test_data/south_africa_cancer_data_2020.csv',
                             ],
                             extra_sim_results=extra_sim_results,
-                            total_trials=2, n_workers=1)
+                            total_trials=40, n_workers=10)
     calib.calibrate(die=True)
-    calib.plot(res_to_plot=4)
+    if do_plot:
+        calib.plot(res_to_plot=4)
 
     # Make sure that rerunning the sims with the best pars from the calibration gives the same results
     calib_pars = calib.trial_pars_to_sim_pars(which_pars=0)
     pars = sc.mergedicts(pars,calib_pars)
     sim = hpv.Sim(pars, analyzers=[hpv.snapshot(timepoints=['1980'])])
-    sim.run().plot()
-
+    sim.run()
+    if do_plot:
+            sim.plot()
 
     return sim, calib
 
@@ -96,7 +98,6 @@ if __name__ == '__main__':
     pplsim = sim.get_analyzer('snapshot').snapshots['1980.0']
     pplrerun_sim = rerun_sim.get_analyzer('snapshot').snapshots['1980.0']
     pplcalib_sim = calib_sim.get_analyzer('snapshot').snapshots['1980.0']
-
 
     sc.toc(T)
     print('Done.')
