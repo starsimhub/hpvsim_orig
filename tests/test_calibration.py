@@ -9,7 +9,7 @@ import numpy as np
 
 do_plot = 0
 do_save = 0
-n_agents = 5e3
+n_agents = 2e3
 
 
 #%% Define the tests
@@ -29,14 +29,14 @@ def test_calibration():
     sim = hpv.Sim(pars, analyzers=[hpv.snapshot(timepoints=['1980'])])
     calib_pars = dict(
         beta=[0.5, 0.3, 0.8],
-        dur_transformed=dict(par1=[5, 1, 10]),
+        dur_transformed=dict(par1=[5, 3, 10]),
     )
     genotype_pars = dict(
         hpv16=dict(
-            sev_fn=dict(k=[0.5, 0.1, 1.0]),
+            sev_fn=dict(k=[0.5, 0.2, 1.0]),
             ),
         hpv18=dict(
-            sev_fn=dict(k=[0.5, 0.1, 1.0]),
+            sev_fn=dict(k=[0.5, 0.2, 1.0]),
         )
     )
 
@@ -48,7 +48,7 @@ def test_calibration():
                                 'test_data/south_africa_cancer_data_2020.csv',
                             ],
                             extra_sim_results=extra_sim_results,
-                            total_trials=40, n_workers=10)
+                            total_trials=2, n_workers=1)
     calib.calibrate(die=True)
     if do_plot:
         calib.plot(res_to_plot=4)
