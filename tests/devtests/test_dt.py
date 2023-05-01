@@ -13,22 +13,19 @@ pars = dict(
 )
 
 # Create the sim
-sims = []
-dts = [0.02, 0.05, 0.1, 0.2, 0.5, 1.0]
+dts = [1/12, 3/12, 4/12, 6/12, 12/12] # use timesteps that produce integral multiples of 12
+n_sims = 10
+msims = []
 for dt in dts:
-    sim = hpv.Sim(pars, dt=dt, label=f'dt={dt}')
-    sims.append(sim)
-msim = hpv.parallel(sims)
-msim.plot()
+    sims = []
+    for s in range(n_sims):
+        pars['rand_seed'] = s
+        sim = hpv.Sim(pars, dt=dt, label=f'dt={dt}')
+        sims.append(sim)
+    msim = hpv.MultiSim(sims)
+    msim.run()
+    msim.mean()
+    msims.append(msim)
 
-#%% Plot sims
-for key in ['n_alive', 'n_total_infected', 'total_hpv_prevalence']:
-
-    fig = pl.figure()
-    dtcols = sc.vectocolor(-pl.log(dts))
-    for i,s in enumerate(msim.sims):
-        res = s.results
-        pl.plot(res.year, res[key], label=s.label, c=dtcols[i], lw=3, alpha=0.7)
-    pl.title(key)
-    
-    pl.legend()
+merged = hpv.MultiSim.merge(msims, base=True)
+merged.plot(['n_alive', 'n_infected', 'hpv_prevalence'], color_by_sim=True)

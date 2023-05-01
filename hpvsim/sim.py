@@ -711,8 +711,9 @@ class Sim(hpb.BaseSim):
             raise AlreadyRunError('Simulation already complete (call sim.initialize() to re-run)')
 
         # Shorten key variables
-        dt = self['dt'] # Timestep
-        t = self.t
+        dt = self['dt'] # Timestep size
+        t = self.t      # Current time step
+        tyears = self.t * dt  # Current time step expressed in years
         ng = self['n_genotypes']
         na = len(self.pars['age_bins']) - 1 # Number of age bins
         condoms = self['condoms']
@@ -736,7 +737,7 @@ class Sim(hpb.BaseSim):
         # Update demographics, states, and partnerships
         self.people.update_states_pre(t=t, year=year) # This also ages people, applies deaths, and generates new births
         people = self.people # Shorten
-        people.dissolve_partnerships(t=t) # Dissolve partnerships
+        people.dissolve_partnerships(t=tyears) # Dissolve partnerships
         tind = self.yearvec[t] - self['start']
         people.create_partnerships(tind, mixing, layer_probs, cross_layer, dur_pship, acts, age_act_pars)
 
@@ -781,10 +782,15 @@ class Sim(hpb.BaseSim):
 
                 f_source_inds = (inf[g][f] & sus[g][m]).nonzero()[0]  # get female sources where female partner is infectious with genotype and male partner is susceptible to that genotype
                 m_source_inds = (inf[g][m] & sus[g][f]).nonzero()[0]  # get male sources where the male partner is infectious with genotype and the female partner is susceptible to that genotype
-
-                foi_frac = 1 - frac_acts * gen_betas[g] * trans[:, None] * (1 - effective_condoms)  # Probability of not getting infected from any fractional acts
-                foi_whole = (1 - gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** whole_acts  # Probability of not getting infected from whole acts
+                dt_fraction = 1. / dt # baseline time scale (1 year) / desired dt (also expressed in years)
+                # Calculate probabilities with adjustment for smaller time step
+                foi_frac = (1 - frac_acts * gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** dt_fraction
+                foi_whole = (1 - gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** (whole_acts * dt_fraction)
                 foi = (1 - (foi_whole * foi_frac)).astype(hpd.default_float)
+
+                # foi_frac = 1 - frac_acts * gen_betas[g] * trans[:, None] * (1 - effective_condoms)  # Probability of not getting infected from any fractional acts
+                # foi_whole = (1 - gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** whole_acts  # Probability of not getting infected from whole acts
+                # foi = (1 - (foi_whole * foi_frac)).astype(hpd.default_float)
 
                 discordant_pairs = [[f_source_inds, f[f_source_inds], m[f_source_inds], foi[0,:]],
                                     [m_source_inds, m[m_source_inds], f[m_source_inds], foi[1,:]]]
@@ -792,7 +798,10 @@ class Sim(hpb.BaseSim):
                 # Compute transmissibility for each partnership
                 for pship_inds, sources, targets, this_foi in discordant_pairs:
                     betas = this_foi[pship_inds] * (1. - sus_imm[g,targets]) * rel_sus[targets] # Pull out the transmissibility associated with this partnership
-                    transmissions = (np.random.random(len(betas)) < betas).nonzero()[0] # Apply probabilities to determine partnerships in which transmission occurred
+                    # NOTE: Tranmission probabilities over a time step shorter than a year, should be smaller than tranmission over a period of 1 year
+                    # NOTE: Hacky scaling which results in reducing tranmission probs? tranmission rates? tranmission prob rates? for dt < 1 year
+                    transmissions = (np.random.random(len(betas))*dt_fraction < betas).nonzero()[0] # Apply probabilities to determine partnerships in which transmission occurred
+                    #transmissions = (np.random.random(len(betas)) < betas).nonzero()[0] # Apply probabilities to determine partnerships in which transmission occurred
                     target_inds   = targets[transmissions] # Extract indices of those who got infected
                     target_inds, unique_inds = np.unique(target_inds, return_index=True)  # Due to multiple partnerships, some people will be counted twice; remove them
                     people.infect(inds=target_inds, g=g, layer=lkey)  # Infect people
@@ -801,7 +810,7 @@ class Sim(hpb.BaseSim):
         for g in range(ng):
             latent_inds = hpu.true(people.latent[g,:])
             if len(latent_inds):
-                reactivation_probs = np.full_like(latent_inds, self['hpv_reactivation'] * dt, dtype=hpd.default_float)
+                reactivation_probs = np.full_like(latent_inds, self['hpv_reactivation'] ** dt_fraction, dtype=hpd.default_float)
 
                 # if self['model_hiv']:
                 #     # determine if any of these inds have HIV and adjust their probs
@@ -811,7 +820,7 @@ class Sim(hpb.BaseSim):
                 #         mod = immune_compromise * self['hiv_pars']['reactivation_prob']
                 #         mod[mod < 1] = 1
                 #         reactivation_probs[hpu.true(people.hiv[latent_inds])] *= mod
-                is_reactivated = hpu.binomial_arr(reactivation_probs)
+                is_reactivated = hpu.binomial_arr(reactivation_probs)**dt_fraction
                 reactivated_inds = latent_inds[is_reactivated]
                 people.infect(inds=reactivated_inds, g=g, layer='reactivation')
 
