@@ -198,7 +198,7 @@ class Sim(hpb.BaseSim):
                 raise ValueError(errormsg)
 
         # Construct other things that keep track of time
-        self.years      = sc.inclusiverange(self['start'],self['end'])
+        self.years      = sc.inclusiverange(self['start'], self['end'])
         self.yearvec    = sc.inclusiverange(start=self['start'], stop=self['end']+1-self['dt'], step=self['dt']) # Includes all the timepoints in the last year
         self.npts       = len(self.yearvec)
         self.tvec       = np.arange(self.npts)
@@ -384,7 +384,7 @@ class Sim(hpb.BaseSim):
         # Handle frequency
         if type(frequency) == str:
             if frequency == 'annual':
-                resfreq = int(1 / self['dt'])
+                resfreq = int(1.0 / self['dt'])
             elif frequency == 'dt':
                 resfreq = 1
             else:
@@ -397,12 +397,14 @@ class Sim(hpb.BaseSim):
             else:
                 resfreq = int(frequency / self['dt'])
         self.resfreq = resfreq
+        self.sampling_period = frequency
         if not self.resfreq > 0:
             errormsg = f'The results frequence should be a positive integer, not {self.resfreq}: dt may be too large'
             raise ValueError(errormsg)
 
         # Construct the tvec that will be used with the results
         points_to_use = np.arange(0, self.npts, self.resfreq)
+
         self.res_yearvec = self.yearvec[points_to_use]
         self.res_npts = len(self.res_yearvec)
         self.res_tvec = np.arange(self.res_npts)
