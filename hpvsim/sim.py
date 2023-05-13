@@ -702,6 +702,14 @@ class Sim(hpb.BaseSim):
 
         return
 
+    def transform_annual_to_dt(self, annual_growth_rate, dt):
+        '''
+        Transform annual growth rates, or annual probabilities, to rates and probabilities
+        over the period dt
+        '''
+        dts_per_year = 1.0 / dt # How many dts fit into the base unit of time 1 year?
+        dt_growth_rate = (1.0 + annual_growth_rate) ** (1.0 / dts_per_year) - 1.0
+        return dt_growth_rate
 
     def step(self):
         ''' Step through time and update values '''
@@ -711,10 +719,10 @@ class Sim(hpb.BaseSim):
             raise AlreadyRunError('Simulation already complete (call sim.initialize() to re-run)')
 
         # Shorten key variables
-        dt = self['dt'] # Timestep size
-        t = self.t      # Current time step
-        tyears = self.t * dt  # Current time step expressed in years
-        ng = self['n_genotypes']
+        dt = self['dt']                     # Timestep size
+        t = self.t                          # Current time step
+        tyears = self.t * dt                # Current time step expressed in years
+        ng = self['n_genotypes']            # Number of genotypes
         na = len(self.pars['age_bins']) - 1 # Number of age bins
         condoms = self['condoms']
         eff_condoms = self['eff_condoms']
@@ -727,7 +735,7 @@ class Sim(hpb.BaseSim):
         acts = self['acts']
         dur_pship = self['dur_pship']
         age_act_pars = self['age_act_pars']
-        trans = np.array([self['transf2m'],self['transm2f']]) # F2M first since that's the order things are done later
+        trans = np.array([self['transf2m'], self['transm2f']]) # F2M first since that's the order things are done later
         year = self.yearvec[t]
 
         # Make HIV-related updates
@@ -742,7 +750,7 @@ class Sim(hpb.BaseSim):
         people.create_partnerships(tind, mixing, layer_probs, cross_layer, dur_pship, acts, age_act_pars)
 
         # Apply interventions
-        for i,intervention in enumerate(self.interventions):
+        for i, intervention in enumerate(self.interventions):
             intervention(self) # If it's a function, call it directly
 
         # Assign sus_imm values, i.e. the protection against infection based on prior immune history
@@ -752,7 +760,7 @@ class Sim(hpb.BaseSim):
                 ss = people.t_imm_event[:, inds].shape
                 t_since_boost = (t - people.t_imm_event[:,inds]).ravel()
                 current_imm = imm_kin_pars[t_since_boost].reshape(ss) # Get people's current level of immunity
-                people.nab_imm[:,inds] = current_imm*people.peak_imm[:,inds] # Set immunity relative to peak
+                people.nab_imm[:, inds] = current_imm*people.peak_imm[:,inds] # Set immunity relative to peak
         else:
             people.nab_imm[:] = people.peak_imm
         hpimm.check_immunity(people)
@@ -777,30 +785,33 @@ class Sim(hpb.BaseSim):
             whole_acts = whole_acts.astype(hpd.default_int)
             effective_condoms = hpd.default_float(condoms[lkey] * eff_condoms)
 
+
             # Compute transmissions by genotype
             for g in range(ng):
 
                 f_source_inds = (inf[g][f] & sus[g][m]).nonzero()[0]  # get female sources where female partner is infectious with genotype and male partner is susceptible to that genotype
                 m_source_inds = (inf[g][m] & sus[g][f]).nonzero()[0]  # get male sources where the male partner is infectious with genotype and the female partner is susceptible to that genotype
-                dt_fraction = 1. / dt # baseline time scale (1 year) / desired dt (also expressed in years)
+                # dts_per_year = 1. / dt # baseline time scale unit (1 year) / desired dt (also expressed in years)
                 # Calculate probabilities with adjustment for smaller time step
-                foi_frac = (1 - frac_acts * gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** dt_fraction
-                foi_whole = (1 - gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** (whole_acts * dt_fraction)
+                foi_frac  = (1 - frac_acts * gen_betas[g] * trans[:, None] * (1 - effective_condoms))
+                foi_whole = (1 -             gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** (whole_acts)
                 foi = (1 - (foi_whole * foi_frac)).astype(hpd.default_float)
+                #foi = self.transform_annual_to_dt(foi, dt)
 
-                # foi_frac = 1 - frac_acts * gen_betas[g] * trans[:, None] * (1 - effective_condoms)  # Probability of not getting infected from any fractional acts
-                # foi_whole = (1 - gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** whole_acts  # Probability of not getting infected from whole acts
-                # foi = (1 - (foi_whole * foi_frac)).astype(hpd.default_float)
+                #foi_frac = 1 - frac_acts * gen_betas[g] * trans[:, None] * (1 - effective_condoms)  # Probability of not getting infected from any fractional acts
+                #foi_whole = (1 - gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** whole_acts  # Probability of not getting infected from whole acts
+                #foi = (1 - (foi_whole * foi_frac)).astype(hpd.default_float)
 
                 discordant_pairs = [[f_source_inds, f[f_source_inds], m[f_source_inds], foi[0,:]],
                                     [m_source_inds, m[m_source_inds], f[m_source_inds], foi[1,:]]]
 
                 # Compute transmissibility for each partnership
                 for pship_inds, sources, targets, this_foi in discordant_pairs:
-                    betas = this_foi[pship_inds] * (1. - sus_imm[g,targets]) * rel_sus[targets] # Pull out the transmissibility associated with this partnership
-                    # NOTE: Tranmission probabilities over a time step shorter than a year, should be smaller than tranmission over a period of 1 year
+                    betas = this_foi[pship_inds] * (1. - sus_imm[g, targets]) * rel_sus[targets] # Pull out the transmissibility associated with this partnership
+                    #betas = self.transform_annual_to_dt(betas, dt)
+                    # NOTE: Tranmission probabilities per act over a time step shorter than a year, should be smaller than tranmission probs over a period of 1 year
                     # NOTE: Hacky scaling which results in reducing tranmission probs? tranmission rates? tranmission prob rates? for dt < 1 year
-                    transmissions = (np.random.random(len(betas))*dt_fraction < betas).nonzero()[0] # Apply probabilities to determine partnerships in which transmission occurred
+                    transmissions = (np.random.random(len(betas)) < betas).nonzero()[0]  # Apply probabilities to determine partnerships in which transmission occurred
                     #transmissions = (np.random.random(len(betas)) < betas).nonzero()[0] # Apply probabilities to determine partnerships in which transmission occurred
                     target_inds   = targets[transmissions] # Extract indices of those who got infected
                     target_inds, unique_inds = np.unique(target_inds, return_index=True)  # Due to multiple partnerships, some people will be counted twice; remove them
@@ -810,7 +821,9 @@ class Sim(hpb.BaseSim):
         for g in range(ng):
             latent_inds = hpu.true(people.latent[g,:])
             if len(latent_inds):
-                reactivation_probs = np.full_like(latent_inds, self['hpv_reactivation'] ** dt_fraction, dtype=hpd.default_float)
+                # Reactivation is an annual probability, needs to be rescaled to represent prob of reactivation over the interval dt,
+                hpv_reactivation_dt = 1.0 - (1.0 - self['hpv_reactivation'])**(dt/1.0)
+                reactivation_probs = np.full_like(latent_inds, hpv_reactivation_dt, dtype=hpd.default_float)
 
                 # if self['model_hiv']:
                 #     # determine if any of these inds have HIV and adjust their probs
@@ -820,7 +833,7 @@ class Sim(hpb.BaseSim):
                 #         mod = immune_compromise * self['hiv_pars']['reactivation_prob']
                 #         mod[mod < 1] = 1
                 #         reactivation_probs[hpu.true(people.hiv[latent_inds])] *= mod
-                is_reactivated = hpu.binomial_arr(reactivation_probs)**dt_fraction
+                is_reactivated = hpu.binomial_arr(reactivation_probs)
                 reactivated_inds = latent_inds[is_reactivated]
                 people.infect(inds=reactivated_inds, g=g, layer='reactivation')
 
