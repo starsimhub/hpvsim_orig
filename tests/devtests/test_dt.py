@@ -9,10 +9,11 @@ pars = dict(
     rand_seed     = 2,          # Set a non-default seed
     genotypes     = [16, 18],   # Include the two genotypes of greatest general interest
     rel_init_prev = 4.0,
+    network  = 'random'
 )
 
 # Create the sim
-dts = [0.625, 0.125, 0.25, 0.5, 1]
+dts = [0.0625, 0.125, 0.25, 0.5, 1]
 
 n_sims = 10
 msims = []
@@ -32,10 +33,13 @@ merged = hpv.MultiSim.merge(msims, base=True)
 
 sim_base = merged.sims[-1]
 
-for sim in merged.sims:
-    plt.plot(sim_base.results['year'], sim.results['infections'].values/sim_base.results['infections'].values)
+result_to_plot = 'infections'
+for idx, sim in enumerate(merged.sims):
+    print(dts[idx])
+    plt.plot(sim.results['year'], sim.results[result_to_plot].values/sim_base.results[result_to_plot].values, label= 'dt='+ str(dts[idx]))
 
 plt.xlabel('year')
-plt.ylabel('ratio dt/dt=1 infections')
+plt.ylabel('ratio dt/dt=1 (' + result_to_plot + ')')
+plt.legend()
 plt.show()
 
