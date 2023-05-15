@@ -709,9 +709,28 @@ class Sim(hpb.BaseSim):
         Transform annual growth rates, or annual probabilities, to rates and probabilities
         over the period dt
         '''
-        dts_per_year = 1.0 / dt # How many dts fit into the base unit of time 1 year?
-        dt_growth_rate = (1.0 + annual_growth_rate) ** (1.0 / dts_per_year) - 1.0
+        dts_per_year = 1.0 / dt  # How many dts fit into the base unit of time 1 year?
+        if isinstance(annual_growth_rate, dict):
+            for k in annual_growth_rate.keys():
+                dt_growth_rate = (1.0 + annual_growth_rate[k]) ** (1.0 / dts_per_year) - 1.0
+                annual_growth_rate[k] =  dt_growth_rate
+                return annual_growth_rate
+        else:
+            dt_growth_rate = (1.0 + annual_growth_rate) ** (1.0 / dts_per_year) - 1.0
         return dt_growth_rate
+
+
+    def transform_by_dt(self, annual_rate, dt):
+        '''
+        Transform annual growth rates, or annual probabilities, to rates and probabilities
+        over the period dt
+        '''
+        if isinstance(annual_rate, dict):
+            for k in annual_rate.keys():
+                dt_rate = annual_rate[k] / dt
+                annual_rate[k] =  dt_rate
+        return annual_rate
+
 
     def step(self):
         ''' Step through time and update values '''
@@ -813,8 +832,8 @@ class Sim(hpb.BaseSim):
                     #betas = self.transform_annual_to_dt(betas, dt)
                     # NOTE: Tranmission probabilities per act over a time step shorter than a year, should be smaller than tranmission probs over a period of 1 year
                     # NOTE: Hacky scaling which results in reducing tranmission probs? tranmission rates? tranmission prob rates? for dt < 1 year
-                    transmissions = (np.random.random(len(betas)) < betas).nonzero()[0]  # Apply probabilities to determine partnerships in which transmission occurred
-                    #transmissions = (np.random.random(len(betas)) < betas).nonzero()[0] # Apply probabilities to determine partnerships in which transmission occurred
+                    transmissions = (np.random.random(len(betas)) < betas*dt).nonzero()[0]  # Apply probabilities to determine partnerships in which transmission occurred
+                    #transmissions = (np.random.random(len(betas)) < betas).nonzero()[0]    # Apply probabilities to determine partnerships in which transmission occurred
                     target_inds   = targets[transmissions] # Extract indices of those who got infected
                     target_inds, unique_inds = np.unique(target_inds, return_index=True)  # Due to multiple partnerships, some people will be counted twice; remove them
                     people.infect(inds=target_inds, g=g, layer=lkey)  # Infect people
