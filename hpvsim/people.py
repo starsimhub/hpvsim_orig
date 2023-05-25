@@ -619,7 +619,7 @@ class People(hpb.BasePeople):
                 self.susceptible[genotype, latent_inds] = False  # should already be false
                 self.infectious[genotype, latent_inds] = False
                 self.inactive[genotype, latent_inds] = True
-                self.date_clearance[genotype, latent_inds] = np.nan
+                # self.date_clearance[genotype, latent_inds] = np.nan # TODO: do we need to clear this?!
 
             f_cleared_inds = f_inds[~latent_bools]
 
