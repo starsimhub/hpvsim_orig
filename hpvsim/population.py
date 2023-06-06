@@ -127,6 +127,8 @@ def make_people(sim, popdict=None, reset=False, verbose=None, use_age_data=True,
 
         popdict['contacts'] = contacts
         popdict['current_partners'] = current_partners
+    elif isinstance(popdict, hpvsim.People):
+        ages = popdict.age
     else:
         ages = popdict['ages']
     # Do minimal validation and create the people
