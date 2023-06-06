@@ -124,9 +124,16 @@ def make_people(sim, popdict=None, reset=False, verbose=None, use_age_data=True,
         popdict['contacts'] = contacts
         popdict['current_partners'] = current_partners
 
+    elif isinstance(popdict, hpppl.People):
+        ages = popdict.age
+    else:
+        ages = popdict['ages']
     # Do minimal validation and create the people
     validate_popdict(popdict, sim.pars, verbose=verbose)
-    people = hpppl.People(sim.pars, pop_trend=pop_trend, pop_age_trend=pop_age_trend, **popdict) # List for storing the people
+    if isinstance(popdict, hpppl.People):
+        people = popdict
+    else:
+        people = hpppl.People(sim.pars, pop_trend=pop_trend, pop_age_trend=pop_age_trend, **popdict) # List for storing the people
 
     sc.printv(f'Created {n_agents} agents, average age {ages.mean():0.2f} years', 2, verbose)
 
