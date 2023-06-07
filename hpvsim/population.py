@@ -332,7 +332,6 @@ def create_edgelist(lno, partners, current_partners, mixing, sex, age, is_active
 
         # Probabilities for males to be selected for new relationships
         m_probs = np.zeros(n_agents)  # Begin by assigning everyone equal probability of forming a new relationship
-        m_active_geo = m_active * (geostructure==geo) # Filter out active males in this geographic cluster
         m_probs[m_active] = 1  # Only select sexually active males
         m_probs[underpartnered] *= pref_weight  # Increase weight for those who are underpartnerned
 
