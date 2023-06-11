@@ -76,7 +76,7 @@ def make_people(sim, popdict=None, reset=False, verbose=None, use_age_data=True,
                 warnmsg = f'Could not load age data for requested location "{location}" ({str(E)})'
                 hpm.warn(warnmsg, die=True)
 
-        uids, sexes, debuts, rel_sev, partners, geo = set_static(n_agents, pars=sim.pars, sex_ratio=sex_ratio)
+        uids, sexes, debuts, rel_sev, partners, lifetime, geo = set_static(n_agents, pars=sim.pars, sex_ratio=sex_ratio)
 
         # Set ages, rounding to nearest timestep if requested
         age_data_min   = age_data[:,0]
@@ -101,6 +101,7 @@ def make_people(sim, popdict=None, reset=False, verbose=None, use_age_data=True,
         popdict['debut'] = debuts
         popdict['rel_sev'] = rel_sev
         popdict['partners'] = partners
+        popdict['lifetime'] = lifetime
         popdict['geo'] = geo
 
         is_active = ages > debuts
@@ -111,10 +112,12 @@ def make_people(sim, popdict=None, reset=False, verbose=None, use_age_data=True,
         if microstructure in ['random', 'default']:
             contacts = dict()
             current_partners = np.zeros((len(lkeys),n_agents))
+            current_lifetime = np.zeros((len(lkeys), n_agents))
             lno=0
             for lkey in lkeys:
                 contacts[lkey], current_partners,_,_ = make_contacts(
-                    lno=lno, tind=0, partners=partners[lno,:], current_partners=current_partners,
+                    lno=lno, tind=0, lifetime=lifetime[lno,:], current_lifetime=current_lifetime,
+                    partners=partners[lno,:], current_partners=current_partners,
                     sexes=sexes, ages=ages, debuts=debuts, is_female=is_female, is_active=is_active,
                     mixing=sim['mixing'][lkey], layer_probs=sim['layer_probs'][lkey], cross_layer=sim['cross_layer'],
                     pref_weight=100, durations=sim['dur_pship'][lkey], acts=sim['acts'][lkey], age_act_pars=sim['age_act_pars'][lkey],
@@ -158,7 +161,7 @@ def partner_count(n_agents=None, partner_pars=None):
     # Set the number of partners
     for lkey,ppars in partner_pars.items():
         p_count = hpu.sample(**ppars, size=n_agents) + 1
-        partners.append(p_count)
+        partners.append(np.round(p_count))
 
     return np.array(partners)
 
@@ -174,6 +177,7 @@ def set_static(new_n, existing_n=0, pars=None, sex_ratio=0.5):
     debut[sex==1]   = hpu.sample(**pars['debut']['m'], size=sum(sex))
     debut[sex==0]   = hpu.sample(**pars['debut']['f'], size=new_n-sum(sex))
     partners        = partner_count(n_agents=new_n, partner_pars=pars['partners'])
+    lifetime        = partner_count(n_agents=new_n, partner_pars=pars['lifetime'])
     geo             = np.random.choice(range(int(pars['geostructure'])), new_n) #TODO: allow these to be differently sized
 
 
@@ -188,7 +192,7 @@ def set_static(new_n, existing_n=0, pars=None, sex_ratio=0.5):
     else:
         rel_sev     = hpu.sample(**pars['sev_dist'], size=new_n) # Draw individual relative susceptibility factors
 
-    return uid, sex, debut, rel_sev, partners, geo
+    return uid, sex, debut, rel_sev, partners, lifetime, geo
 
 
 def validate_popdict(popdict, pars, verbose=True):
@@ -270,11 +274,13 @@ def age_scale_acts(acts=None, age_act_pars=None, age_f=None, age_m=None, debut_f
     return scaled_acts
 
 
-def create_edgelist(lno, partners, current_partners, mixing, sex, age, is_active, is_female,
+def create_edgelist(lno, lifetime, current_lifetime, partners, current_partners, mixing, sex, age, is_active, is_female,
                         layer_probs, pref_weight, cross_layer, geostructure, geomixing):
     '''
     Create partnerships for a single layer
     Args:
+        lifetime            (int arr): array containing each agent's desired lifetime number of partners in this layer
+        current_lifetime    (int arr): array containing each agent's actual lifetime number of partners in this layer
         partners            (int arr): array containing each agent's desired number of partners in this layer
         current_partners    (int arr): array containing each agent's actual current number of partners in this layer
         mixing              (float arr): age mixing matrix
@@ -296,7 +302,7 @@ def create_edgelist(lno, partners, current_partners, mixing, sex, age, is_active
     n_layers        = current_partners.shape[0]
     f_active        =  is_female & is_active
     m_active        = ~is_female & is_active
-    underpartnered  = current_partners[lno, :] < partners  # Indices of underpartnered people
+    underpartnered  = (current_partners[lno, :] < partners) & (current_lifetime[lno, :] < lifetime)  # Indices of underpartnered people
 
     # Figure out how many new relationships to create by calculating the number of agents
     # who are underpartnered in this layer and either unpartnered in other layers or available
@@ -360,7 +366,7 @@ def create_edgelist(lno, partners, current_partners, mixing, sex, age, is_active
 
 
 
-def make_contacts(lno=None, tind=None, partners=None, current_partners=None,
+def make_contacts(lno=None, tind=None, lifetime=None, current_lifetime=None, partners=None, current_partners=None,
                   sexes=None, ages=None, debuts=None, is_female=None, is_active=None,
                   mixing=None, layer_probs=None, cross_layer=None,
                   pref_weight=None, durations=None, acts=None, age_act_pars=None,
@@ -372,7 +378,7 @@ def make_contacts(lno=None, tind=None, partners=None, current_partners=None,
 
     # Create edgelist
     f,m,current_partners,new_pship_inds,new_pship_counts = create_edgelist(
-        lno, partners, current_partners, mixing, sexes, ages, is_active, is_female,
+        lno, lifetime, current_lifetime, partners, current_partners, mixing, sexes, ages, is_active, is_female,
         layer_probs, pref_weight, cross_layer, geo_structure, geomixing)
 
     # Convert edgelist into Contacts dict, with info about each partnership's duration,

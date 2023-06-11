@@ -162,6 +162,7 @@ class PeopleMeta(sc.prettyobj):
             State('rship_end_dates', default_float, np.nan, shape='n_partner_types'),
             State('n_rships', default_int, 0, shape='n_partner_types'),
             State('partners', default_float, np.nan, shape='n_partner_types'),  # Int by relationship type
+            State('lifetime', default_float, np.nan, shape='n_partner_types'),  # Int by relationship type
             State('current_partners', default_float, 0, 'n_partner_types'),  # Int by relationship type
         ]
 

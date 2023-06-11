@@ -443,7 +443,8 @@ class People(hpb.BasePeople):
         lno=0
         for lkey in self.layer_keys():
             pship_args = dict(
-                lno=lno, tind=tind, partners=self.partners[lno], current_partners=self.current_partners,
+                lno=lno, tind=tind, lifetime=self.lifetime[lno], current_lifetime=self.n_rships,
+                partners=self.partners[lno], current_partners=self.current_partners,
                 sexes=self.sex, ages=self.age, debuts=self.debut, is_female=self.is_female, is_active=self.is_active,
                 mixing=mixing[lkey], layer_probs=layer_probs[lkey], cross_layer=cross_layer,
                 pref_weight=pref_weight, durations=dur_pship[lkey], acts=acts[lkey], age_act_pars=age_act_pars[lkey],
@@ -694,7 +695,7 @@ class People(hpb.BasePeople):
 
         if new_births>0:
             # Generate other characteristics of the new people
-            uids, sexes, debuts, rel_sev, partners, geo = hppop.set_static(new_n=new_births, existing_n=len(self),
+            uids, sexes, debuts, rel_sev, partners, lifetime, geo = hppop.set_static(new_n=new_births, existing_n=len(self),
                                                                            pars=self.pars)
             # Grow the arrays`
             new_inds = self._grow(new_births)
@@ -705,6 +706,7 @@ class People(hpb.BasePeople):
             self.debut[new_inds]        = debuts
             self.rel_sev[new_inds]      = rel_sev
             self.partners[:,new_inds]   = partners
+            self.lifetime[:,new_inds]   = lifetime
             self.geo[new_inds]          = geo
 
             if immunity is not None:
