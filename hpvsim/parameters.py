@@ -178,9 +178,9 @@ def reset_layer_pars(pars, layer_keys=None, force=False):
         partners    = dict(m=dict(dist='poisson', par1=0.01), # Everyone in this layer has one marital partner; this captures *additional* marital partners. If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 spouse
                            c=dict(dist='poisson', par1=0.2), # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 casual partner at a time
                            o=dict(dist='poisson', par1=0.0),), # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 one-off partner at a time. Can be set to zero since these relationships only last a single timestep
-        lifetime    = dict(m=dict(dist='normal_pos', par1=1, par2=0.1), # On average 1 marital spouse over a lifetime
-                           c=dict(dist='normal_pos', par1=2, par2=0.1),
-                           o=dict(dist='normal_pos', par1=1, par2=0.1)),
+        lifetime    = dict(m=dict(dist='poisson', par1=1), # Everyone in this layer has one marital partner; this captures *additional* marital partners. If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 spouse
+                           c=dict(dist='poisson', par1=3), # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 casual partner at a time
+                           o=dict(dist='poisson', par1=2)),
         acts         = dict(m=dict(dist='neg_binomial', par1=80, par2=40), # Default number of acts per year for people at sexual peak
                             c=dict(dist='neg_binomial', par1=10, par2=5), # Default number of acts per year for people at sexual peak
                             o=dict(dist='neg_binomial', par1=1,  par2=.01)),  # Default number of acts per year for people at sexual peak
