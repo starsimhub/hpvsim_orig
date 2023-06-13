@@ -132,6 +132,9 @@ def make_people(sim, popdict=None, reset=False, verbose=None, use_age_data=True,
         popdict['contacts'] = contacts
         popdict['current_partners'] = current_partners
 
+    else:
+        ages = popdict['age']
+
     # Do minimal validation and create the people
     validate_popdict(popdict, sim.pars, verbose=verbose)
     people = hpppl.People(sim.pars, pop_trend=pop_trend, pop_age_trend=pop_age_trend, **popdict) # List for storing the people
@@ -143,12 +146,12 @@ def make_people(sim, popdict=None, reset=False, verbose=None, use_age_data=True,
 
 def partner_count(n_agents=None, partner_pars=None):
     '''
-    Assign each person a preferred number of concurrent partners for each layer
+    Assign each person a preferred number of concurrent/lifetime partners for each layer
 
     Args:
         n_agents    (int)   : number of agents
         layer_keys  (list)  : list of layers
-        means       (dict)  : dictionary keyed by layer_keys with mean number of partners per layer
+        dist pars   (dict)  : dictionary keyed by layer_keys with mean number of partners per layer
         sample      (bool)  : whether or not to sample the number of partners
 
     Returns:
