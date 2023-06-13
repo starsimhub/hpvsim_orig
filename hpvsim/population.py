@@ -144,7 +144,7 @@ def make_people(sim, popdict=None, reset=False, verbose=None, use_age_data=True,
     return people, total_pop
 
 
-def partner_count(n_agents=None, partner_pars=None):
+def partner_count(n_agents=None, partner_pars=None, concurrent=True):
     '''
     Assign each person a preferred number of concurrent/lifetime partners for each layer
 
@@ -163,7 +163,10 @@ def partner_count(n_agents=None, partner_pars=None):
 
     # Set the number of partners
     for lkey,ppars in partner_pars.items():
-        p_count = hpu.sample(**ppars, size=n_agents) + 1
+        if concurrent:
+            p_count = hpu.sample(**ppars, size=n_agents) + 1
+        else:
+            p_count = hpu.sample(**ppars, size=n_agents)
         partners.append(np.round(p_count))
 
     return np.array(partners)
@@ -179,8 +182,8 @@ def set_static(new_n, existing_n=0, pars=None, sex_ratio=0.5):
     debut           = np.full(new_n, np.nan, dtype=hpd.default_float)
     debut[sex==1]   = hpu.sample(**pars['debut']['m'], size=sum(sex))
     debut[sex==0]   = hpu.sample(**pars['debut']['f'], size=new_n-sum(sex))
-    partners        = partner_count(n_agents=new_n, partner_pars=pars['partners'])
-    lifetime        = partner_count(n_agents=new_n, partner_pars=pars['lifetime'])
+    partners        = partner_count(n_agents=new_n, partner_pars=pars['partners'], concurrent=True)
+    lifetime        = partner_count(n_agents=new_n, partner_pars=pars['lifetime'], concurrent=False)
     geo             = np.random.choice(range(int(pars['geostructure'])), new_n) #TODO: allow these to be differently sized
 
 
@@ -305,7 +308,7 @@ def create_edgelist(lno, lifetime, current_lifetime, partners, current_partners,
     n_layers        = current_partners.shape[0]
     f_active        =  is_female & is_active
     m_active        = ~is_female & is_active
-    underpartnered  = (current_partners[lno, :] < partners) & (current_lifetime[lno, :] < lifetime)  # Indices of underpartnered people
+    underpartnered  = (current_partners[lno, :] < partners) #& (current_lifetime[lno, :] < lifetime)  # Indices of underpartnered people
 
     # Figure out how many new relationships to create by calculating the number of agents
     # who are underpartnered in this layer and either unpartnered in other layers or available

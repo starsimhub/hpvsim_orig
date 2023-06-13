@@ -178,9 +178,9 @@ def reset_layer_pars(pars, layer_keys=None, force=False):
         partners    = dict(m=dict(dist='poisson', par1=0.01), # Everyone in this layer has one marital partner; this captures *additional* marital partners. If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 spouse
                            c=dict(dist='poisson', par1=0.2), # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 casual partner at a time
                            o=dict(dist='poisson', par1=0.0),), # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 one-off partner at a time. Can be set to zero since these relationships only last a single timestep
-        lifetime    = dict(m=dict(dist='poisson', par1=1), # Everyone in this layer has one marital partner; this captures *additional* marital partners. If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 spouse
-                           c=dict(dist='poisson', par1=3), # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 casual partner at a time
-                           o=dict(dist='poisson', par1=2)),
+        lifetime    = dict(m=dict(dist='neg_binomial', par1=0.5, par2=2), # This captures desired number of lifetime marital partners
+                           c=dict(dist='neg_binomial', par1=0.5, par2=4), # This captures desired number of lifetime casual partners
+                           o=dict(dist='neg_binomial', par1=0.5, par2=1)), # This captures desired number of lifetime one-off partners
         acts         = dict(m=dict(dist='neg_binomial', par1=80, par2=40), # Default number of acts per year for people at sexual peak
                             c=dict(dist='neg_binomial', par1=10, par2=5), # Default number of acts per year for people at sexual peak
                             o=dict(dist='neg_binomial', par1=1,  par2=.01)),  # Default number of acts per year for people at sexual peak
@@ -538,8 +538,8 @@ def get_mixing(network=None):
         layer_probs = dict(
             m=np.array([
                 [ 0,  5,    10,    15,   20,   25,   30,   35,    40,    45,    50,   55,   60,   65,   70,   75],
-                [ 0,  0,  0.04,   0.1,  0.1,  0.5,  0.6,  0.7,  0.75,  0.65,  0.55,  0.4,  0.4,  0.4,  0.4,  0.4], # Share of females of each age who are married
-                [ 0,  0,  0.01,  0.01,  0.1,  0.5,  0.6,  0.7,  0.70,  0.70,  0.70,  0.8,  0.7,  0.6,  0.5,  0.6]] # Share of males of each age who are married
+                [ 0,  0,  0.04,   0.1,  0.1,  0.5,  0.6,  0.7,  0.75,  0.65,  0.55,  0.4,  0.4,  0.1,  0.01,  0.0], # Share of females of each age who are eligible to become newly married
+                [ 0,  0,  0.01,  0.01,  0.1,  0.5,  0.6,  0.7,  0.70,  0.70,  0.70,  0.8,  0.5,  0.3,  0.1,  0.01]] # Share of males of each age who are eligible to become newly married
             ),
             c=np.array([
                 [ 0,  5,    10,    15,   20,   25,   30,   35,    40,    45,    50,   55,   60,   65,   70,   75],
