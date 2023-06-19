@@ -127,8 +127,8 @@ def make_pars(**kwargs):
     pars['immunity_map']    = None  # dictionary mapping the index of immune source to the type of immunity (vaccine vs natural)
     pars['imm_kin']         = None  # Constructed during sim initialization using the nab_decay parameters
     pars['genotype_map']    = dict()  # Reverse mapping from number to genotype key
-    pars['n_genotypes']     = 1 # The number of genotypes circulating in the population
-    pars['n_imm_sources']   = 1 # The number of immunity sources circulating in the population
+    pars['n_genotypes']     = 3 # The number of genotypes circulating in the population
+    pars['n_imm_sources']   = 3 # The number of immunity sources circulating in the population
     pars['vaccine_pars']    = dict()  # Vaccines that are being used; populated during initialization
     pars['vaccine_map']     = dict()  # Reverse mapping from number to vaccine key
     pars['cumdysp']         = dict()
@@ -746,7 +746,7 @@ def get_geo_mixing(pars):
     geo_size = int(pars['geostructure'])
     geomixing = np.zeros([geo_size, geo_size])
 
-    if pars.get('geo_mixing_steps'):
+    if 'geo_mixing_steps' in pars.keys():
         if pars['geo_mixing_steps'] is not None:
             if geo_size < len(pars['geo_mixing_steps']):
                 print('Warning: input has {} mixing steps but only {} geographic clusters.'.format(len(pars['geo_mixing_steps']), geo_size))
