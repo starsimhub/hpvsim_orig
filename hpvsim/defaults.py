@@ -76,12 +76,15 @@ class PeopleMeta(sc.prettyobj):
             State('uid',            default_int),           # Int
             State('geo',            default_int,    0),     # Int
             State('scale',          default_float,  1.0), # Float
-            State('level0',         bool,  True), # "Normal" people
-            State('level1',         bool,  False), # "High-resolution" people: e.g. cancer agents
             State('age',            default_float,  np.nan), # Float
             State('sex',            default_float,  np.nan), # Float
             State('debut',          default_float,  np.nan), # Float
             State('ever_partnered', bool,  False), # Whether this person has ever been partnered
+        ]
+
+        self.hpv_person = [
+            State('level0',         bool,  True), # "Normal" people
+            State('level1',         bool,  False), # "High-resolution" people: e.g. cancer agents
             State('sev',            default_float, np.nan, shape='n_genotypes'), # Severity of infection, taking values between 0-1
             State('rel_sev',        default_float, 1.0), # Individual relative risk for rate severe disease growth
             State('rel_sus',        default_float, 1.0), # Individual relative risk for acquiring infection (does not vary by genotype)
@@ -101,9 +104,13 @@ class PeopleMeta(sc.prettyobj):
         self.alive_states = [
             # States related to whether or not the person is alive or dead
             State('alive',          bool,   True,   label='Population'),    # Save this as a state so we can record population sizes
-            State('dead_cancer',    bool,   False,  label='Cumulative cancer deaths'),   # Dead from cancer
             State('dead_other',     bool,   False,  label='Cumulative deaths from other causes'),   # Dead from all other causes
             State('emigrated',      bool,   False,  label='Emigrated'),  # Emigrated
+        ]
+
+        self.alive_hpv_states = [
+            # States related to whether or not the person is alive or dead
+            State('dead_cancer', bool, False, label='Cumulative cancer deaths'),  # Dead from cancer
         ]
 
         self.viral_states = [
@@ -178,7 +185,7 @@ class PeopleMeta(sc.prettyobj):
     # Collection of mutually exclusive + collectively exhaustive states
     @property
     def mece_states(self):
-        return self.alive_states + self.viral_states + self.cell_states
+        return self.alive_states + self.alive_hpv_states + self.viral_states + self.cell_states
 
     # Collection of states that we store as stock results
     @property
@@ -188,7 +195,7 @@ class PeopleMeta(sc.prettyobj):
     # Collection of states for which we store associated dates
     @property
     def date_states(self):
-        return [state for state in self.alive_states + self.stock_states if not state.fill_value]
+        return [state for state in self.alive_states + self.alive_hpv_states + self.stock_states if not state.fill_value]
 
     # Set dates
     @property
@@ -205,12 +212,18 @@ class PeopleMeta(sc.prettyobj):
     # All states
     @property
     def all_states(self):
-        return self.person + self.alive_states + self.viral_states + self.cell_states + self.derived_states + self.intv_states + self.other_stock_states + self.imm_states + self.rship_states + self.durs
+        return self.person + self.hpv_person + self.alive_states + self.alive_hpv_states + self.viral_states + self.cell_states + self.derived_states + self.intv_states + self.other_stock_states + self.imm_states + self.rship_states + self.durs
 
     # States to set - same as above but does not include derived states
     @property
     def states_to_set(self):
-        return self.person + self.alive_states + self.viral_states + self.cell_states + self.intv_states + self.other_stock_states + self.imm_states + self.rship_states + self.durs + self.dates
+        return self.person + self.hpv_person + self.alive_states + self.alive_hpv_states + self.viral_states + self.cell_states + self.intv_states + self.other_stock_states + self.imm_states + self.rship_states + self.durs + self.dates
+
+
+    # HPV states to set -- only includes hpv specific states to set
+    @property
+    def hpv_states_to_set(self):
+        return self.hpv_person + self.alive_hpv_states + self.viral_states + self.cell_states + self.intv_states + self.other_stock_states + self.imm_states + self.durs + self.dates
 
     @property
     def stock_keys(self):
