@@ -628,9 +628,9 @@ class People(hpb.BasePeople):
             self.inactive[genotype, cleared_inds] = False # should already be false
 
         if len(f_cleared_inds):
-            # female_cleared_inds = np.intersect1d(cleared_inds, self.f_inds) # Only give natural immunity to females
-            hpimm.update_peak_immunity(self, f_cleared_inds, imm_pars=self.pars, imm_source=genotype) # update immunity
             self.date_reactivated[genotype, f_cleared_inds] = np.nan
+
+        hpimm.update_peak_immunity(self, f_inds, imm_pars=self.pars, imm_source=genotype)  # update immunity
 
         # Whether infection is controlled on not, clear all cell changes and severity markeres
         self.episomal[genotype, f_inds] = False
