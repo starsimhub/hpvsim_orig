@@ -824,8 +824,9 @@ class Sim(hpb.BaseSim):
         for g in range(ng):
             latent_inds = hpu.true(people.latent[g,:])
             if len(latent_inds):
+                sev_imm = people.sev_imm[g,:]
                 reactivation_probs = np.full_like(latent_inds, self['hpv_reactivation'] * dt, dtype=hpd.default_float)
-
+                reactivation_probs *= (1-sev_imm)
                 # if self['model_hiv']:
                 #     # determine if any of these inds have HIV and adjust their probs
                 #     hiv_latent_inds = latent_inds[hpu.true(people.hiv[latent_inds])]
