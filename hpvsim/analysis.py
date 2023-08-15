@@ -825,7 +825,7 @@ class age_results(Analyzer):
                         else:
                             denom = bin_ages(inds=ppl.alive, bins=bins)
                     else:  # Denominator is females
-                        denom = bin_ages(inds=ppl.f_inds, bins=bins)
+                        denom = bin_ages(inds=ppl.is_female_alive, bins=bins)
                     if rdict.by_genotype: denom = denom[None, :]
                     self.results[rkey][date] = self.results[rkey][date] / (denom)
 
