@@ -5,6 +5,7 @@ Defines functions for making the population.
 #%% Imports
 import numpy as np
 import sciris as sc
+import scipy.optimize as spo
 from . import utils as hpu
 from . import misc as hpm
 from . import data as hpdata
@@ -356,6 +357,78 @@ def create_edgelist(lno, partners, current_partners, mixing, sex, age, is_active
     return f_paired, m_paired, current_partners, new_pship_inds, new_pship_counts
 
 
+def create_edgelist_lsa(lno, partners, current_partners, mixing, sex, age, is_active, is_female,
+                        layer_probs, cross_layer, cluster, add_mixing):
+    '''
+    Testing network based on linear_sum_assignment
+
+    Args:
+        partners            (int arr): array containing each agent's desired number of partners in this layer
+        current_partners    (int arr): array containing each agent's actual current number of partners in this layer
+        mixing              (float arr): age mixing matrix
+        sex                 (bool arr): sex
+        age                 (float arr): age
+        is_active           (bool arr): whether or not people are sexually active
+        is_female           (bool arr): whether each person is female
+        layer_probs         (float arr): participation rates in this layer by age and sex
+        cross_layer         (float): proportion of agents that have cross-layer relationships
+        cluster             (int arr): array containing each agent's cluster id
+        add_mixing          (float arr): additional mixing matrix
+    '''
+
+    # Useful variables
+    n_agents        = len(sex)
+    n_layers        = current_partners.shape[0]
+    f_active        =  is_female & is_active
+    m_active        = ~is_female & is_active
+    underpartnered  = current_partners[lno, :] < partners  # Indices of underpartnered people
+
+    # Figure out how many new relationships to create by calculating the number of agents
+    # who are underpartnered in this layer and either unpartnered in other layers or available
+    # for cross-layer participation
+    other_layers            = np.delete(np.arange(n_layers), lno)  # Indices of all other layers but this one
+    other_partners          = current_partners[other_layers, :].any(axis=0)  # Whether or not people already partnered in other layers
+    other_partners_inds     = hpu.true(other_partners) # Indices of sexually active agents with partners in other layers
+    cross_inds              = hpu.binomial_filter(cross_layer, other_partners_inds) # Indices who have cross-layer relationships
+    cross_layer_bools       = np.full(n_agents, False, dtype=bool) # Construct a boolean array indicating whether people have cross-layer relationships
+    cross_layer_bools[cross_inds]  = True # Only true for the selected agents
+    f_inds                  = hpu.true(f_active & underpartnered & (~other_partners | cross_layer_bools))
+    m_inds                  = hpu.true(m_active & underpartnered & (~other_partners | cross_layer_bools))
+
+    ###
+    bins = layer_probs[0, :]  # Extract age bins
+    age_bins_f = np.digitize(age[f_inds], bins=bins) - 1  # Age bins of participating females
+    age_bins_m = np.digitize(age[m_inds], bins=bins) - 1  # Age bins of participating males
+    n_f, n_m = len(age_bins_f), len(age_bins_m)
+
+    ord_f = np.arange(n_f)
+    np.random.shuffle(ord_f)
+    ord_m = np.arange(n_m)
+    np.random.shuffle(ord_m)
+
+    dist_mat_age = np.fromfunction(lambda i, j: mixing[age_bins_f[ord_f[i]], age_bins_m[ord_m[j]]], (n_f, n_m), dtype=int)
+    dist_mat_cl = np.fromfunction(lambda i, j: add_mixing[cluster[f_inds[ord_f[i]]], cluster[m_inds[ord_m[j]]]], (n_f, n_m), dtype=int)
+    dist_mat = dist_mat_age * dist_mat_cl
+
+    dist_mat[dist_mat==0] = np.iinfo(int).min
+
+    f_assign, m_assign = spo.linear_sum_assignment(dist_mat, maximize=True)
+    f_paired = f_inds[ord_f[f_assign]]
+    m_paired = m_inds[ord_m[m_assign]]
+    new_pship_inds, new_pship_counts = np.unique(np.concatenate([f_paired, m_paired]), return_counts=True)
+    current_partners[lno, new_pship_inds] += new_pship_counts
+
+    '''
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.csgraph import min_weight_full_bipartite_matching
+    biadjacency_matrix = csr_matrix(dist_mat)
+    f_inds, m_inds = min_weight_full_bipartite_matching(biadjacency_matrix, maximize=True)
+    #from scipy.sparse.csgraph import maximum_bipartite_matching
+    #perm = maximum_bipartite_matching(biadjacency_matrix, perm_type='row')
+    '''
+
+    return f_paired, m_paired, current_partners, new_pship_inds, new_pship_counts
+
 
 def make_contacts(lno=None, tind=None, partners=None, current_partners=None,
                   sexes=None, ages=None, debuts=None, is_female=None, is_active=None,
@@ -368,7 +441,7 @@ def make_contacts(lno=None, tind=None, partners=None, current_partners=None,
     '''
 
     # Create edgelist
-    f,m,current_partners,new_pship_inds,new_pship_counts = create_edgelist(
+    f,m,current_partners,new_pship_inds,new_pship_counts = create_edgelist_lsa(
         lno, partners, current_partners, mixing, sexes, ages, is_active, is_female,
         layer_probs, cross_layer, cluster, add_mixing)
 

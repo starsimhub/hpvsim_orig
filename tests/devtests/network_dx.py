@@ -96,14 +96,20 @@ def network_demo():
         sims.append(sim)
     msim = hpv.MultiSim(sims)
     msim.run()
-    msim.plot(style='simple')
+    p = msim.plot(style='simple')
+    p.savefig('comparison.png')
 
     for sim in msim.sims:
         # plot age and cluster mixing by year
-        plot_mixing(sim, 'age')
-        plot_mixing(sim, 'cluster')
+        g = plot_mixing(sim, 'age')
+        g.savefig(f'age_{sim.label}.png')
+
+        g = plot_mixing(sim, 'cluster')
+        g.savefig(f'cluster_{sim.label}.png')
+
         # plot number of relationships overtime
-        plot_rships(sim)
+        g = plot_rships(sim)
+        g.savefig(f'rships_{sim.label}.png')
 
 def plot_mixing(sim, dim):
     df_new_pairs = sim.get_analyzer('new_pairs_snap').new_pairs
@@ -121,13 +127,13 @@ def plot_mixing(sim, dim):
         data = data.pivot(index='x_bins', columns='y_bins', values='count')
         ax = sns.heatmap(data, **kwargs)
         ax.invert_yaxis()
-    g = sns.FacetGrid(count_df, col='year', row='rtype', height=4)
+    g = sns.FacetGrid(count_df, col='year', row='rtype', height=3)
     g.map_dataframe(facet, cmap='viridis', cbar=True, square=True)
     g.set_axis_labels(f'{dim} of female partners', f'{dim} of male partners')
     g.fig.subplots_adjust(top=0.9)
     g.fig.suptitle(sim.label)
     g.tight_layout()
-    plt.show()
+    return g
 
 def plot_rships(sim):
     layer_keys = list(sim['partners'].keys())
@@ -145,6 +151,7 @@ def plot_rships(sim):
     g.fig.tight_layout()
     g.fig.subplots_adjust(top=0.9)
     g.fig.suptitle(sim.label)
+    return g
 
 
 #%% Run as a script
@@ -154,4 +161,5 @@ if __name__ == '__main__':
     network_demo()
     #cluster_demo()
     sc.toc(T)
+    plt.show()
     print('Done.')
