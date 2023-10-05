@@ -430,6 +430,116 @@ def create_edgelist_lsa(lno, partners, current_partners, mixing, sex, age, is_ac
     return f_paired, m_paired, current_partners, new_pship_inds, new_pship_counts
 
 
+def create_edgelist_lsa_prob(lno, partners, current_partners, mixing, sex, age, is_active, is_female,
+                        layer_probs, cross_layer, cluster, add_mixing):
+    '''
+    Testing network based on linear_sum_assignment to approximate a joint probability matrix.
+    '''
+
+    # Useful variables
+    n_agents        = len(sex)
+    n_layers        = current_partners.shape[0]
+    f_active        =  is_female & is_active
+    m_active        = ~is_female & is_active
+    underpartnered  = current_partners[lno, :] < partners  # Indices of underpartnered people
+
+    # Figure out how many new relationships to create by calculating the number of agents
+    # who are underpartnered in this layer and either unpartnered in other layers or available
+    # for cross-layer participation
+    other_layers            = np.delete(np.arange(n_layers), lno)  # Indices of all other layers but this one
+    other_partners          = current_partners[other_layers, :].any(axis=0)  # Whether or not people already partnered in other layers
+    other_partners_inds     = hpu.true(other_partners) # Indices of sexually active agents with partners in other layers
+    cross_inds              = hpu.binomial_filter(cross_layer, other_partners_inds) # Indices who have cross-layer relationships
+    cross_layer_bools       = np.full(n_agents, False, dtype=bool) # Construct a boolean array indicating whether people have cross-layer relationships
+    cross_layer_bools[cross_inds]  = True # Only true for the selected agents
+    f_inds                  = hpu.true(f_active & underpartnered & (~other_partners | cross_layer_bools))
+    m_inds                  = hpu.true(m_active & underpartnered & (~other_partners | cross_layer_bools))
+
+    bins = layer_probs[0, :]  # Extract age bins
+    age_bins_f = np.digitize(age[f_inds], bins=bins) - 1  # Age bins of participating females
+    age_bins_m = np.digitize(age[m_inds], bins=bins) - 1  # Age bins of participating males
+    n_f, n_m = len(age_bins_f), len(age_bins_m)
+
+    ###
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(1,2)
+
+    abm, nm = np.unique(age_bins_m, return_counts=True)
+    ax[0].scatter(bins[abm], nm/nm.sum(), s=50, marker='o', c='c')
+    mrg = mixing.sum(axis=1)
+    ax[0].bar(bins, mrg/mrg.sum(), color='k')
+
+    abf, nf = np.unique(age_bins_f, return_counts=True)
+    ax[1].scatter(bins[abf], nf/nf.sum(), s=50, marker='o', c='m')
+    mrg = mixing[:,1:].sum(axis=0)
+    ax[1].bar(bins, mrg/mrg.sum(), color='k')
+    plt.show()
+    ###
+
+    '''
+    ord_f = np.arange(n_f)
+    np.random.shuffle(ord_f)
+    ord_m = np.arange(n_m)
+    np.random.shuffle(ord_m)
+    '''
+
+    #dist_mat_age = np.fromfunction(lambda i, j: mixing[age_bins_f[ord_f[i]], age_bins_m[ord_m[j]]], (n_f, n_m), dtype=int)
+    #dist_mat_cl = np.fromfunction(lambda i, j: add_mixing[cluster[f_inds[ord_f[i]]], cluster[m_inds[ord_m[j]]]], (n_f, n_m), dtype=int)
+    #dist_mat = dist_mat_age * dist_mat_cl
+
+    def cost_loc(M, bins):
+        mrg = M.sum(axis=1)[:,np.newaxis] # Male marginal
+        c = np.zeros_like(M)
+        np.divide(M, mrg, out=c, where=mrg!=0) # Conditional
+
+        loc = np.ones(len(m_inds), dtype=int)
+        for bi, bin in enumerate(np.unique(bins)):
+            inds = hpu.true(bins == bin)
+            c_bin = c[bi,:]
+            if c_bin.sum() > 0:
+                draw = np.random.multinomial(n=len(inds), pvals=c_bin, size=1)
+                for i, n in enumerate(draw[0]):
+                    inds_i = np.random.choice(a=inds, size=n, replace=False)
+                    loc[inds_i] = i
+                    inds = np.setdiff1d(inds, inds_i)
+
+        n = len(M)
+        cost = np.zeros((n,n,n))
+        for mi in range(cost.shape[0]):
+            for fi in range(cost.shape[1]):
+                # Cost for male of bin index mi wanting fem of bin index fi switching to a different fi
+                #ijk = np.iinfo(int).max * np.ones(n)
+                #np.divide(c[mi,fi], c[mi], out=ijk, where=c[mi]!=0)
+                cost[mi, fi, :] = 1 / c[mi]
+                cost[mi, fi, fi] = 0
+
+        return loc, cost
+
+    age_loc, age_cost = cost_loc(mixing[:,1:], age_bins_m)
+    add_loc, add_cost = cost_loc(add_mixing, cluster[m_inds])
+
+    def draw_dist(mi, fi, loc, cost, bins_m, bins_f):
+        #return cost[bins_m[ord_m[mi]], loc[ord_m[mi]], bins_f[ord_f[fi]]]
+        cmat = cost[bins_m[mi], loc[mi], bins_f[fi]]
+        cmat[np.isnan(cmat)] = 1000 #np.iinfo(int).max
+        cmat[np.isinf(cmat)] = 1000 #np.iinfo(int).max
+        return cmat
+    
+    dist_mat_age = np.fromfunction(draw_dist, (n_m, n_f), dtype=int, loc=age_loc, cost=age_cost, bins_m=age_bins_m, bins_f=age_bins_f)
+    dist_mat_add = np.fromfunction(draw_dist, (n_m, n_f), dtype=int, loc=add_loc, cost=add_cost, bins_m=cluster[m_inds], bins_f=cluster[f_inds])
+    dist_mat = dist_mat_age * dist_mat_add
+
+    m_assign, f_assign = spo.linear_sum_assignment(dist_mat, maximize=False)
+    #m_paired = m_inds[ord_m[m_assign]]
+    m_paired = m_inds[m_assign]
+    #f_paired = f_inds[ord_f[f_assign]]
+    f_paired = f_inds[f_assign]
+    new_pship_inds, new_pship_counts = np.unique(np.concatenate([f_paired, m_paired]), return_counts=True)
+    current_partners[lno, new_pship_inds] += new_pship_counts
+
+    return f_paired, m_paired, current_partners, new_pship_inds, new_pship_counts
+
+
 def make_contacts(lno=None, tind=None, partners=None, current_partners=None,
                   sexes=None, ages=None, debuts=None, is_female=None, is_active=None,
                   mixing=None, layer_probs=None, cross_layer=None,
@@ -441,7 +551,7 @@ def make_contacts(lno=None, tind=None, partners=None, current_partners=None,
     '''
 
     # Create edgelist
-    f,m,current_partners,new_pship_inds,new_pship_counts = create_edgelist_lsa(
+    f,m,current_partners,new_pship_inds,new_pship_counts = create_edgelist_lsa_prob(
         lno, partners, current_partners, mixing, sexes, ages, is_active, is_female,
         layer_probs, cross_layer, cluster, add_mixing)
 
