@@ -460,21 +460,21 @@ def create_edgelist_lsa_prob(lno, partners, current_partners, mixing, sex, age, 
     age_bins_m = np.digitize(age[m_inds], bins=bins) - 1  # Age bins of participating males
     n_f, n_m = len(age_bins_f), len(age_bins_m)
 
-    ###
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1,2)
+    # TEMP CODE, REMOVE:
+    if False:
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1,2)
 
-    abm, nm = np.unique(age_bins_m, return_counts=True)
-    ax[0].scatter(bins[abm], nm/nm.sum(), s=50, marker='o', c='c')
-    mrg = mixing.sum(axis=1)
-    ax[0].bar(bins, mrg/mrg.sum(), color='k')
+        abm, nm = np.unique(age_bins_m, return_counts=True)
+        ax[0].scatter(bins[abm], nm/nm.sum(), s=50, marker='o', c='c')
+        mrg = mixing.sum(axis=1)
+        ax[0].bar(bins, mrg/mrg.sum(), color='k')
 
-    abf, nf = np.unique(age_bins_f, return_counts=True)
-    ax[1].scatter(bins[abf], nf/nf.sum(), s=50, marker='o', c='m')
-    mrg = mixing[:,1:].sum(axis=0)
-    ax[1].bar(bins, mrg/mrg.sum(), color='k')
-    plt.show()
-    ###
+        abf, nf = np.unique(age_bins_f, return_counts=True)
+        ax[1].scatter(bins[abf], nf/nf.sum(), s=50, marker='o', c='m')
+        mrg = mixing[:,1:].sum(axis=0)
+        ax[1].bar(bins, mrg/mrg.sum(), color='k')
+        plt.show()
 
     '''
     ord_f = np.arange(n_f)
