@@ -119,9 +119,9 @@ class Sim(sc.prettyobj):
         return
 
     def run(self):
-        for t in range(self.pars.npts):
+        for ti in range(self.pars.npts):
             self.t += self.pars.dt
-            res = self.people.update(t)
+            res = self.people.update(ti)
             self.results.append(res)
 
         self.df = sc.dataframe(self.results)

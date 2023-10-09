@@ -110,10 +110,10 @@ def make_people(sim, popdict=None, reset=False, verbose=None, use_age_data=True,
             lno=0
             for lkey in lkeys:
                 contacts[lkey], current_partners,_,_ = make_contacts(
-                    lno=lno, tind=0, partners=partners[lno,:], current_partners=current_partners,
+                    lno=lno, date=sim['start'], partners=partners[lno,:], current_partners=current_partners,
                     sexes=sexes, ages=ages, debuts=debuts, is_female=is_female, is_active=is_active,
                     mixing=sim['mixing'][lkey], layer_probs=sim['layer_probs'][lkey], cross_layer=sim['cross_layer'],
-                    pref_weight=100, durations=sim['dur_pship'][lkey], acts=sim['acts'][lkey], age_act_pars=sim['age_act_pars'][lkey], **kwargs
+                    pref_weight=100, durations=sim['dur_pship'][lkey], act_rate=sim['act_rate'][lkey], age_act_pars=sim['age_act_pars'][lkey], **kwargs
                 )
                 lno += 1
 
@@ -219,8 +219,8 @@ def _tidy_edgelist(f, m, mapping=None):
     return output
 
 
-def age_scale_acts(acts=None, age_act_pars=None, age_f=None, age_m=None, debut_f=None, debut_m=None):
-    ''' Scale the number of acts for each relationship according to the age of the partners '''
+def age_scale_acts(acts_per_year=None, age_act_pars=None, age_f=None, age_m=None, debut_f=None, debut_m=None):
+    ''' Scale the number of acts per year for each relationship according to the age of the partners '''
 
     # For each couple, get the average age they are now and the average age of debut
     avg_age     = np.array([age_f, age_m]).mean(axis=0)
@@ -233,23 +233,23 @@ def age_scale_acts(acts=None, age_act_pars=None, age_f=None, age_m=None, debut_f
     retire = age_act_pars['retirement']
 
     # Get indices of people at different stages
-    below_peak_inds = avg_age <=  age_act_pars['peak']
+    below_peak_inds = avg_age  <= age_act_pars['peak']
     above_peak_inds = (avg_age >  age_act_pars['peak']) & (avg_age <  age_act_pars['retirement'])
-    retired_inds    = avg_age >  age_act_pars['retirement']
+    retired_inds    = avg_age  >  age_act_pars['retirement']
 
-    # Set values by linearly scaling the number of acts for each partnership according to
+    # Set values by linearly scaling the number of acts per year for each partnership according to
     # the age of the couple at the commencement of the relationship
-    below_peak_vals = acts[below_peak_inds]* (dr + (1-dr)/(peak - avg_debut[below_peak_inds]) * (avg_age[below_peak_inds] - avg_debut[below_peak_inds]))
-    above_peak_vals = acts[above_peak_inds]* (rr + (1-rr)/(peak - retire)                     * (avg_age[above_peak_inds] - retire))
+    below_peak_vals = acts_per_year[below_peak_inds]* (dr + (1-dr)/(peak - avg_debut[below_peak_inds]) * (avg_age[below_peak_inds] - avg_debut[below_peak_inds]))
+    above_peak_vals = acts_per_year[above_peak_inds]* (rr + (1-rr)/(peak - retire)                     * (avg_age[above_peak_inds] - retire))
     retired_vals = 0
 
     # Set values and return
-    scaled_acts = np.full(len(acts), np.nan, dtype=hpd.default_float)
-    scaled_acts[below_peak_inds] = below_peak_vals
-    scaled_acts[above_peak_inds] = above_peak_vals
-    scaled_acts[retired_inds] = retired_vals
+    scaled_acts_per_year = np.full(len(acts_per_year), np.nan, dtype=hpd.default_float)
+    scaled_acts_per_year[below_peak_inds] = below_peak_vals
+    scaled_acts_per_year[above_peak_inds] = above_peak_vals
+    scaled_acts_per_year[retired_inds] = retired_vals
 
-    return scaled_acts
+    return scaled_acts_per_year
 
 
 def create_edgelist(lno, partners, current_partners, mixing, sex, age, is_active, is_female,
@@ -336,10 +336,10 @@ def create_edgelist(lno, partners, current_partners, mixing, sex, age, is_active
 
 
 
-def make_contacts(lno=None, tind=None, partners=None, current_partners=None,
+def make_contacts(lno=None, date=None, partners=None, current_partners=None,
                   sexes=None, ages=None, debuts=None, is_female=None, is_active=None,
                   mixing=None, layer_probs=None, cross_layer=None,
-                  pref_weight=None, durations=None, acts=None, age_act_pars=None):
+                  pref_weight=None, durations=None, act_rate=None, age_act_pars=None):
     '''
     Make contacts for a single layer as an edgelist. This will select sexually
     active male partners for sexually active females using age structure if given.
@@ -355,31 +355,30 @@ def make_contacts(lno=None, tind=None, partners=None, current_partners=None,
     output = {}
 
     if len(f):
-        # Scale number of acts by age of couple
-        acts = hpu.sample(**acts, size=len(f))
-        kwargs = dict(acts=acts,
-                      age_act_pars=age_act_pars,
-                      age_f=ages[f],
-                      age_m=ages[m],
-                      debut_f=debuts[f],
-                      debut_m=debuts[m]
+        # Determine number of acts per year by age of couple
+        acts_per_year = hpu.sample(**act_rate, size=len(f))
+        kwargs = dict(acts_per_year     = acts_per_year,
+                      age_act_pars      = age_act_pars,
+                      age_f             = ages[f],
+                      age_m             = ages[m],
+                      debut_f           = debuts[f],
+                      debut_m           = debuts[m]
                       )
 
-        scaled_acts = age_scale_acts(**kwargs)
-        keep_inds = scaled_acts>0 # Discard partnerships with zero acts (e.g. because they are "post-retirement")
+        scaled_acts_per_year = age_scale_acts(**kwargs)
+        keep_inds = scaled_acts_per_year>0 # Discard partnerships with zero acts (e.g. because they are "post-retirement")
         m = m[keep_inds]
         f = f[keep_inds]
-        scaled_acts = scaled_acts[keep_inds]
+        scaled_acts_per_year = scaled_acts_per_year[keep_inds]
 
         # Tidy up and add durations and start dates
         output = _tidy_edgelist(f, m)
         n_partnerships = len(output['m'])
         output['age_f'] = ages[f]
         output['age_m'] = ages[m]
-        output['dur'] = hpu.sample(**durations, size=n_partnerships)
-        output['acts'] = scaled_acts
-        output['start'] = np.array([tind] * n_partnerships, dtype=hpd.default_float)
-        output['end'] = output['start'] + output['dur']
+        output['dur']   = hpu.sample(**durations, size=n_partnerships)
+        output['acts_per_year'] = scaled_acts_per_year
+        output['start'] = np.array([date] * n_partnerships, dtype=hpd.default_float)
+        output['end']   = output['start'] + output['dur']
 
     return output, current_partners, new_pship_inds, new_pship_counts
-

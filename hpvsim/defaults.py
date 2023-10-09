@@ -73,24 +73,24 @@ class PeopleMeta(sc.prettyobj):
 
         # Set the properties of a person
         self.person = [
-            State('uid',            default_int),           # Int
-            State('scale',          default_float,  1.0), # Float
-            State('level0',         bool,  True), # "Normal" people
-            State('level1',         bool,  False), # "High-resolution" people: e.g. cancer agents
+            State('uid',            default_int),            # Int
+            State('scale',          default_float,  1.0),    # Float
+            State('level0',         bool,  True),            # "Normal" people
+            State('level1',         bool,  False),           # "High-resolution" people: e.g. cancer agents
             State('age',            default_float,  np.nan), # Float
             State('sex',            default_float,  np.nan), # Float
             State('debut',          default_float,  np.nan), # Float
-            State('ever_partnered', bool,  False), # Whether this person has ever been partnered
+            State('ever_partnered', bool,  False),           # Whether this person has ever been partnered
             State('sev',            default_float, np.nan, shape='n_genotypes'), # Severity of infection, taking values between 0-1
-            State('rel_sev',        default_float, 1.0), # Individual relative risk for rate severe disease growth
-            State('rel_sus',        default_float, 1.0), # Individual relative risk for acquiring infection (does not vary by genotype)
-            State('rel_imm',        default_float, 1.0), # Individual relative level of immunity acquired from infection clearance/vaccination
-            State('doses',          default_int,    0),  # Number of doses of the prophylactic vaccine given per person
-            State('txvx_doses',     default_int,    0),  # Number of doses of the therapeutic vaccine given per person
-            State('vaccine_source', default_int,    -1), # Index of the prophylactic vaccine that individual received
-            State('screens',        default_int,    0),  # Number of screens given per person
-            State('cin_treatments', default_int,    0),  # Number of CIN treatments given per person
-            State('cancer_treatments', default_int,    0),  # Number of cancer treatments given per person
+            State('rel_sev',        default_float, 1.0),   # Individual relative risk for rate severe disease growth
+            State('rel_sus',        default_float, 1.0),   # Individual relative risk for acquiring infection (does not vary by genotype)
+            State('rel_imm',        default_float, 1.0),   # Individual relative level of immunity acquired from infection clearance/vaccination
+            State('doses',          default_int,    0),    # Number of doses of the prophylactic vaccine given per person
+            State('txvx_doses',     default_int,    0),    # Number of doses of the therapeutic vaccine given per person
+            State('vaccine_source', default_int,    -1),   # Index of the prophylactic vaccine that individual received
+            State('screens',        default_int,    0),    # Number of screens given per person
+            State('cin_treatments', default_int,    0),    # Number of CIN treatments given per person
+            State('cancer_treatments', default_int,    0), # Number of cancer treatments given per person
             State('art_adherence',  default_float, 0, label='adherence on ART', color='#aaa8ff')
         ]
 
@@ -147,21 +147,21 @@ class PeopleMeta(sc.prettyobj):
 
         # Immune states, by genotype/vaccine
         self.imm_states = [
-            State('sus_imm',        default_float,  0,'n_imm_sources'),  # Float, by genotype
-            State('sev_imm',        default_float,  0, 'n_imm_sources'),  # Float, by genotype
-            State('peak_imm',       default_float,  0,'n_imm_sources'),  # Float, peak level of immunity
-            State('nab_imm',        default_float,  0,'n_imm_sources'),  # Float, current immunity level
-            State('t_imm_event',    default_int,    0,'n_imm_sources'),  # Int, time since immunity event
-            State('cell_imm',       default_float,  0,'n_imm_sources'),
+            State('sus_imm',      default_float,  0, shape='n_imm_sources'),  # Float, by genotype
+            State('sev_imm',      default_float,  0, shape='n_imm_sources'), # Float, by genotype
+            State('peak_imm',     default_float,  0, shape='n_imm_sources'),  # Float, peak level of immunity
+            State('nab_imm',      default_float,  0, shape='n_imm_sources'),  # Float, current immunity level
+            State('ti_imm_event', default_int,    0, shape='n_imm_sources'),  # Int, time step of last immunity event
+            State('cell_imm',     default_float,  0, shape='n_imm_sources'),
         ]
 
         # Relationship states
         self.rship_states = [
-            State('rship_start_dates', default_float, np.nan, shape='n_partner_types'),
-            State('rship_end_dates', default_float, np.nan, shape='n_partner_types'),
-            State('n_rships', default_int, 0, shape='n_partner_types'),
-            State('partners', default_float, np.nan, shape='n_partner_types'),  # Int by relationship type
-            State('current_partners', default_float, 0, 'n_partner_types'),  # Int by relationship type
+            State('rship_start_tis',  default_float, np.nan, shape='n_partner_types'),
+            State('rship_end_ti',     default_float, np.nan, shape='n_partner_types'),
+            State('n_rships',         default_int,   0,      shape='n_partner_types'),
+            State('partners',         default_float, np.nan, shape='n_partner_types'),  # Int by relationship type
+            State('current_partners', default_float, 0,      shape='n_partner_types'),  # Int by relationship type
         ]
 
         # Duration of different states: these are floats per person -- used in people.py
@@ -186,20 +186,20 @@ class PeopleMeta(sc.prettyobj):
 
     # Collection of states for which we store associated dates
     @property
-    def date_states(self):
+    def timepoint_states(self):
         return [state for state in self.alive_states + self.stock_states if not state.fill_value]
 
-    # Set dates
+    # Set timepoints
     @property
-    def dates(self):
-        ''' Dates are stored for all states except susceptible, and alive, and normal (which are True by default) '''
-        dates = [State(f'date_{state.name}', default_float, np.nan, shape=state.shape) for state in self.date_states]
-        dates += [
-            State('date_clearance', default_float, np.nan, shape='n_genotypes'),
-            State('date_exposed', default_float, np.nan, shape='n_genotypes'),
-            State('date_reactivated', default_float, np.nan, shape='n_genotypes'),
+    def timepoints(self):
+        ''' Timepoints are stored for all states except susceptible, and alive, and normal (which are True by default) '''
+        timepoints = [State(f'ti_{state.name}', default_float, np.nan, shape=state.shape) for state in self.timepoint_states]
+        timepoints += [
+            State('ti_clearance', default_float, np.nan, shape='n_genotypes'),
+            State('ti_exposed', default_float, np.nan, shape='n_genotypes'),
+            State('ti_reactivated', default_float, np.nan, shape='n_genotypes'),
         ]
-        return dates
+        return timepoints
 
     # All states
     @property
@@ -209,7 +209,7 @@ class PeopleMeta(sc.prettyobj):
     # States to set - same as above but does not include derived states
     @property
     def states_to_set(self):
-        return self.person + self.alive_states + self.viral_states + self.cell_states + self.intv_states + self.other_stock_states + self.imm_states + self.rship_states + self.durs + self.dates
+        return self.person + self.alive_states + self.viral_states + self.cell_states + self.intv_states + self.other_stock_states + self.imm_states + self.rship_states + self.durs + self.timepoints
 
     @property
     def stock_keys(self):
@@ -251,7 +251,7 @@ class PeopleMeta(sc.prettyobj):
 
         """
         # Validate
-        state_types = ['person', 'mece_states', 'imm_states', 'intv_states', 'dates', 'durs', 'all_states']
+        state_types = ['person', 'mece_states', 'imm_states', 'intv_states', 'timepoints', 'durs', 'all_states']
         for state_type in state_types:
             states = getattr(self, state_type)
             n_states        = len(states)

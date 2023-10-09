@@ -359,14 +359,14 @@ def test_result_consistency():
 
     # Check that males don't have CINs or cancers
     male_inds = sim.people.is_male.nonzero()[0]
-    males_with_cin = hpv.defined(sim.people.date_cin1[:,male_inds])
-    males_with_cancer = hpv.defined(sim.people.date_cancerous[:,male_inds])
+    males_with_cin = hpv.defined(sim.people.ti_cin1[:,male_inds])
+    males_with_cancer = hpv.defined(sim.people.ti_cancerous[:,male_inds])
     assert len(males_with_cin)==0
     assert len(males_with_cancer)==0
 
     # Check that people younger than debut don't have HPV
     virgin_inds = (sim.people.is_virgin).nonzero()[-1]
-    virgins_with_hpv = (~np.isnan(sim.people.date_infectious[:,virgin_inds])).nonzero()[-1]
+    virgins_with_hpv = (~np.isnan(sim.people.ti_infectious[:,virgin_inds])).nonzero()[-1]
     assert len(virgins_with_hpv)==0
 
     return sim

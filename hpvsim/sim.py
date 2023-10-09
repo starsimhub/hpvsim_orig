@@ -37,7 +37,7 @@ class Sim(hpb.BaseSim):
         self.data          = None     # The data
         self.popdict       = people   # The population dictionary
         self.people        = None     # Initialize these here so methods that check their length can see they're empty
-        self.t             = None     # The current time in the simulation (during execution); outside of sim.step(), its value corresponds to next timestep to be computed
+        self.ti            = None     # The current time index in the simulation (during execution); outside of sim.step(), its value corresponds to next timestep to be computed
         self.results       = {}       # For storing results
         self.summary       = None     # For storing a summary of the results
         self.initialized   = False    # Whether or not initialization is complete
@@ -78,7 +78,7 @@ class Sim(hpb.BaseSim):
         '''
         Perform all initializations on the sim.
         '''
-        self.t = 0  # The current time index
+        self.ti = 0  # The current time index
         self.validate_pars()  # Ensure parameters have valid values
         self.validate_dt()
         self.init_time_vecs()  # Initialise time vectors
@@ -102,7 +102,7 @@ class Sim(hpb.BaseSim):
         Attempt to retrieve the current layer keys.
         '''
         try:
-            keys = list(self['acts'].keys()) # Get keys from acts
+            keys = list(self['act_rate'].keys()) # Get keys from acts
         except: # pragma: no cover
             keys = []
         return keys
@@ -252,7 +252,7 @@ class Sim(hpb.BaseSim):
         self.years      = sc.inclusiverange(self['start'],self['end'])
         self.yearvec    = sc.inclusiverange(start=self['start'], stop=self['end']+1-self['dt'], step=self['dt']) # Includes all the timepoints in the last year
         self.npts       = len(self.yearvec)
-        self.tvec       = np.arange(self.npts)
+        self.tivec      = np.arange(self.npts)
 
 
     def validate_init_conditions(self, init_hpv_prev):
@@ -432,7 +432,7 @@ class Sim(hpb.BaseSim):
             errormsg = f'The results frequence should be a positive integer, not {self.resfreq}: dt may be too large'
             raise ValueError(errormsg)
 
-        # Construct the tvec that will be used with the results
+        # Construct the tivec that will be used with the results
         points_to_use = np.arange(0, self.npts, self.resfreq)
         self.res_yearvec = self.yearvec[points_to_use]
         self.res_npts = len(self.res_yearvec)
@@ -755,7 +755,7 @@ class Sim(hpb.BaseSim):
 
         # Shorten key variables
         dt = self['dt'] # Timestep
-        t = self.t
+        ti = self.ti
         ng = self['n_genotypes']
         condoms = self['condoms']
         eff_condoms = self['eff_condoms']
@@ -765,22 +765,21 @@ class Sim(hpb.BaseSim):
         mixing = self['mixing']
         layer_probs = self['layer_probs']
         cross_layer = self['cross_layer']
-        acts = self['acts']
+        act_rate = self['act_rate']
         dur_pship = self['dur_pship']
         age_act_pars = self['age_act_pars']
         trans = np.array([self['transf2m'],self['transm2f']]) # F2M first since that's the order things are done later
-        year = self.yearvec[t]
+        year = self.yearvec[ti]
 
         # Make HIV-related updates
         if self.pars['model_hiv']:
             self.hivsim.step(people=self.people, year=year)
 
         # Update demographics, states, and partnerships
-        self.people.update_states_pre(t=t, year=year) # This also ages people, applies deaths, and generates new births
+        self.people.update_states_pre(ti=ti, year=year) # This also ages people, applies deaths, and generates new births
         people = self.people # Shorten
-        people.dissolve_partnerships(t=t) # Dissolve partnerships
-        tind = self.yearvec[t] - self['start']
-        people.create_partnerships(tind, mixing, layer_probs, cross_layer, dur_pship, acts, age_act_pars)
+        people.dissolve_partnerships(self.yearvec[ti]) # Dissolve partnerships
+        people.create_partnerships(self.yearvec[ti], mixing, layer_probs, cross_layer, dur_pship, act_rate, age_act_pars)
 
         # Apply interventions
         for i,intervention in enumerate(self.interventions):
@@ -790,9 +789,9 @@ class Sim(hpb.BaseSim):
         if self['use_waning']:
             inds = hpu.true(people.peak_imm.sum(axis=0)).astype(hpd.default_int)
             if len(inds):
-                ss = people.t_imm_event[:, inds].shape
-                t_since_boost = (t - people.t_imm_event[:,inds]).ravel()
-                current_imm = imm_kin_pars[t_since_boost].reshape(ss) # Get people's current level of immunity
+                ss = people.ti_imm_event[:, inds].shape
+                dti_since_boost = (ti - people.ti_imm_event[:,inds]).ravel()
+                current_imm = imm_kin_pars[dti_since_boost].reshape(ss) # Get people's current level of immunity
                 people.nab_imm[:,inds] = current_imm*people.peak_imm[:,inds] # Set immunity relative to peak
         else:
             people.nab_imm[:] = people.peak_imm
@@ -813,9 +812,9 @@ class Sim(hpb.BaseSim):
             # Shorten variables
             f = layer['f']
             m = layer['m']
-            acts = layer['acts'] * dt
-            frac_acts, whole_acts = np.modf(acts)
-            whole_acts = whole_acts.astype(hpd.default_int)
+            acts = layer['acts_per_year'] * dt
+            #frac_acts, whole_acts = np.modf(acts)
+            #whole_acts = whole_acts.astype(hpd.default_int)
             effective_condoms = hpd.default_float(condoms[lkey] * eff_condoms)
 
             # Compute transmissions by genotype
@@ -824,19 +823,22 @@ class Sim(hpb.BaseSim):
                 f_source_inds = (inf[g][f] & sus[g][m]).nonzero()[0]  # get female sources where female partner is infectious with genotype and male partner is susceptible to that genotype
                 m_source_inds = (inf[g][m] & sus[g][f]).nonzero()[0]  # get male sources where the male partner is infectious with genotype and the female partner is susceptible to that genotype
 
-                foi_frac = 1 - frac_acts * gen_betas[g] * trans[:, None] * (1 - effective_condoms)  # Probability of not getting infected from any fractional acts
-                foi_whole = (1 - gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** whole_acts  # Probability of not getting infected from whole acts
-                foi = (1 - (foi_whole * foi_frac)).astype(hpd.default_float)
+                #foi_frac = 1 - frac_acts * gen_betas[g] * trans[:, None] * (1 - effective_condoms)  # Probability of not getting infected from any fractional acts
+                #foi_whole = (1 - gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** whole_acts  # Probability of not getting infected from whole acts
+                #foi = (1 - (foi_whole * foi_frac)).astype(hpd.default_float)
+                # DJK
+                foi = (1 - (1 - gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** acts).astype(hpd.default_float)  # Probability of infection
 
                 discordant_pairs = [[f_source_inds, f[f_source_inds], m[f_source_inds], foi[0,:]],
                                     [m_source_inds, m[m_source_inds], f[m_source_inds], foi[1,:]]]
 
                 # Compute transmissibility for each partnership
                 for pship_inds, sources, targets, this_foi in discordant_pairs:
+                    # DJK, sus_imm and rel_sus need to be baked into the FOI!
                     betas = this_foi[pship_inds] * (1. - sus_imm[g,targets]) * rel_sus[targets] # Pull out the transmissibility associated with this partnership
                     transmissions = (np.random.random(len(betas)) < betas).nonzero()[0] # Apply probabilities to determine partnerships in which transmission occurred
                     target_inds   = targets[transmissions] # Extract indices of those who got infected
-                    target_inds, unique_inds = np.unique(target_inds, return_index=True)  # Due to multiple partnerships, some people will be counted twice; remove them
+                    target_inds = np.unique(target_inds)  # Due to multiple partnerships, some people will be counted twice; remove them
                     people.infect(inds=target_inds, g=g, layer=lkey)  # Infect people
 
         # Determine if there are any reactivated infections on this timestep
@@ -858,7 +860,7 @@ class Sim(hpb.BaseSim):
                 people.infect(inds=reactivated_inds, g=g, layer='reactivation')
 
         # Index for results
-        idx = int(t / self.resfreq)
+        idx = int(ti / self.resfreq)
 
         # Update counts for this time step: flows
         for key,count in people.flows.items():
@@ -877,7 +879,7 @@ class Sim(hpb.BaseSim):
             self.results[key+'_by_age'][:,idx] += count
 
         # Make stock updates every nth step, where n is the frequency of result output
-        if t % self.resfreq == self.resfreq-1:
+        if ti % self.resfreq == self.resfreq-1:
 
             # Number infectious/susceptible by age, for prevalence calculations
             f_inds = hpu.true(people['sex']==0)
@@ -938,12 +940,12 @@ class Sim(hpb.BaseSim):
             self.results['n_females_alive_by_age'][:,idx] = np.histogram(people.age[alive_female_inds], bins=people.age_bin_edges, weights=people.scale[alive_female_inds])[0]
 
         # Apply analyzers
-        for i,analyzer in enumerate(self.analyzers):
+        for analyzer in self.analyzers:
             analyzer(self)
 
         # Tidy up
-        self.t += 1
-        if self.t == self.npts:
+        self.ti += 1
+        if self.ti == self.npts:
             self.complete = True
 
         return
@@ -983,20 +985,23 @@ class Sim(hpb.BaseSim):
 
         # Check for AlreadyRun errors
         errormsg = None
-        until = self.npts if until is None else self.get_t(until)
+        until = self.npts if until is None else self.get_ti(until)
         if until > self.npts:
             errormsg = f'Requested to run until t={until} but the simulation end is t={self.npts}'
-        if self.t >= until: # NB. At the start, self.t is None so this check must occur after initialization
-            errormsg = f'Simulation is currently at t={self.t}, requested to run until t={until} which has already been reached'
+        if self.ti >= until: # NB. At the start, self.ti is None so this check must occur after initialization
+            errormsg = f'Simulation is currently at ti={self.ti}, requested to run until ti={until} which has already been reached'
         if self.complete:
             errormsg = 'Simulation is already complete (call sim.initialize() to re-run)'
-        if self.people.t not in [self.t, self.t-1]: # Depending on how the sim stopped, either of these states are possible
-            errormsg = f'The simulation has been run independently from the people (t={self.t}, people.t={self.people.t}): if this is intentional, manually set sim.people.t = sim.t. Remember to save the people object before running the sim.'
+        if self.people.ti not in [self.ti, self.ti-1]: # Depending on how the sim stopped, either of these states are possible
+            errormsg = f'The simulation has been run independently from the\
+            people (ti={self.ti}, people.ti={self.people.ti}): if this is\
+            intentional, manually set sim.people.ti = sim.ti. Remember to save\
+            the people object before running the sim.'
         if errormsg:
             raise AlreadyRunError(errormsg)
 
         # Main simulation loop
-        while self.t < until:
+        while self.ti < until:
 
             # Check if we were asked to stop
             elapsed = T.toc(output=True)
@@ -1010,12 +1015,12 @@ class Sim(hpb.BaseSim):
             # Print progress
             if verbose:
                 simlabel = f'"{self.label}": ' if self.label else ''
-                string = f'  Running {simlabel}{self.yearvec[self.t]:0.1f} ({self.t:2.0f}/{self.npts}) ({elapsed:0.2f} s) '
+                string = f'  Running {simlabel}{self.yearvec[self.ti]:0.1f} ({self.ti:2.0f}/{self.npts}) ({elapsed:0.2f} s) '
                 if verbose >= 2:
                     sc.heading(string)
                 elif verbose>0:
-                    if not (self.t % int(1.0/verbose)):
-                        sc.progressbar(self.t+1, self.npts, label=string, length=20, newline=True)
+                    if not (self.ti % int(1.0/verbose)):
+                        sc.progressbar(self.ti+1, self.npts, label=string, length=20, newline=True)
 
             # Do the heavy lifting -- actually run the model!
             self.step()
@@ -1045,7 +1050,7 @@ class Sim(hpb.BaseSim):
 
         # Final settings
         self.results_ready = True # Set this first so self.summary() knows to print the results
-        self.t -= 1 # During the run, this keeps track of the next step; restore this be the final day of the sim
+        self.ti -= 1 # During the run, this keeps track of the next step; restore this be the final day of the sim
 
         # Perform calculations on results
         self.compute_results(verbose=verbose) # Calculate the rest of the results

@@ -192,9 +192,8 @@ def update_peak_immunity(people, inds, imm_pars, imm_source, offset=None, infect
             boosted_peak = people.peak_imm[imm_source, dose3_inds] * imm_pars['imm_boost'][1]
             people.peak_imm[imm_source, dose3_inds] = np.maximum(new_peak, boosted_peak)
 
-
-    base_t = people.t + offset if offset is not None else people.t
-    people.t_imm_event[imm_source, inds] = base_t
+    base_ti = people.ti + offset if offset is not None else people.ti
+    people.ti_imm_event[imm_source, inds] = base_ti
 
     return
 

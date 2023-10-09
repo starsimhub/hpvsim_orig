@@ -134,7 +134,7 @@ class Calibration(sc.prettyobj):
             self.sim['model_hiv'] = True # if calibrating HIV parameters, make sure model is running HIV
         self.sim.initialize()
         for rkey in sim_results.keys():
-            sim_results[rkey].timepoints = sim.get_t(sim_results[rkey].data.year.unique()[0], return_date_format='str')[0]//sim.resfreq
+            sim_results[rkey].timepoints = sim.get_ti(sim_results[rkey].data.year.unique()[0], return_date_format='str')[0]//sim.resfreq
             if 'weights' not in sim_results[rkey].data.columns:
                 sim_results[rkey].weights = np.ones(len(sim_results[rkey].data))
         self.age_results_keys = age_result_args.keys()

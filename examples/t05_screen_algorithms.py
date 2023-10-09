@@ -34,7 +34,7 @@ def make_algorithms(sim=None, seed=0, debug=debug):
     triage_screen_prob = 0.9
     ablate_prob = 0.9
     start_year = 2025
-    screen_eligible = lambda sim: np.isnan(sim.people.date_screened) | (sim.t > (sim.people.date_screened + 5 / sim['dt']))
+    screen_eligible = lambda sim: np.isnan(sim.people.ti_screened) | (sim.ti > (sim.people.ti_screened + 5 / sim['dt']))
 
 
     ####################################################################

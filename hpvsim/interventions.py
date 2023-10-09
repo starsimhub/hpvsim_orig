@@ -456,7 +456,7 @@ class dynamic_pars(Intervention):
         ''' Initialize with a sim '''
         for parkey in self.pars.keys():
             try: # First try to interpret the timepoints as dates
-                tps = sim.get_t(self.pars[parkey]['timepoints'])  # Translate input to timepoints
+                tps = sim.get_ti(self.pars[parkey]['timepoints'])  # Translate input to timepoints
             except:
                 tps = []
                 # See if it's in the time vector
@@ -473,7 +473,7 @@ class dynamic_pars(Intervention):
 
     def apply(self, sim):
         ''' Loop over the parameters, and then loop over the timepoints, applying them if any are found '''
-        t = sim.t
+        t = sim.ti
         for parkey,parval in self.pars.items():
             if t in parval['processed_timepoints']:
                 self.timepoints.append(t)
@@ -496,12 +496,12 @@ class EventSchedule(Intervention):
     or other changes to interventions without needing to implement time-dependency in the
     intervention itself.
 
-    To use the intervention, simply index the intervention by ``t`` or by date.
+    To use the intervention, simply index the intervention by ``ti`` or by date.
 
     Example:
 
     >>> iv = EventSchedule()
-    >>> iv[1] = lambda sim: print(sim.t)
+    >>> iv[1] = lambda sim: print(sim.ti)
     >>> iv['2020-04-02'] = lambda sim: print('foo')
 
     """
@@ -530,14 +530,14 @@ class EventSchedule(Intervention):
 
         # Then convert any dates into time indices
         for k, v in list(self.schedule.items()):
-            t = sim.get_t(k)[0]
-            if t != k:
-                self.schedule[t] += v
+            ti = sim.get_ti(k)[0]
+            if ti != k:
+                self.schedule[ti] += v
                 del self.schedule[k]
 
     def apply(self, sim):
-        if sim.t in self.schedule:
-            for fcn in self.schedule[sim.t]:
+        if sim.ti in self.schedule:
+            for fcn in self.schedule[sim.ti]:
                 fcn(sim)
 
 
@@ -646,7 +646,7 @@ class BaseVaccination(Intervention):
         '''
         # Determine whether to apply the intervention. Apply it if no timepoints have been given or
         # if the timepoint matches one of the requested timepoints.
-        if len(self.timepoints)>0 and (sim.t not in self.timepoints): do_apply = False
+        if len(self.timepoints)>0 and (sim.ti not in self.timepoints): do_apply = False
         else: do_apply = True
         accept_inds = np.array([])
 
@@ -657,7 +657,7 @@ class BaseVaccination(Intervention):
             if len(self.timepoints)==0: # No timepoints provided
                 prob = self.prob
             else: # Get the proportion of people who screen on this timestep
-                prob = self.prob[sc.findinds(self.timepoints, sim.t)[0]]
+                prob = self.prob[sc.findinds(self.timepoints, sim.ti)[0]]
             accept_inds = select_people(eligible_inds, prob=prob)
 
             if len(accept_inds):
@@ -665,11 +665,11 @@ class BaseVaccination(Intervention):
 
                 # Update people's state and dates
                 sim.people.vaccinated[accept_inds] = True
-                sim.people.date_vaccinated[accept_inds] = sim.t
+                sim.people.ti_vaccinated[accept_inds] = sim.ti
                 sim.people.doses[accept_inds] += 1
 
                 # Update results
-                idx = int(sim.t / sim.resfreq)
+                idx = int(sim.ti / sim.resfreq)
                 new_vx_inds = hpu.ifalsei(sim.people.vaccinated, accept_inds)  # Figure out people who are getting vaccinated for the first time
                 n_new_doses = sim.people.scale_flows(accept_inds)  # Scale
                 n_new_people = sim.people.scale_flows(new_vx_inds)  # Scale
@@ -777,12 +777,12 @@ class BaseTest(Intervention):
         '''
         Deliver the diagnostics by finding who's eligible, finding who accepts, and applying the product.
         '''
-        ti = sc.findinds(self.timepoints, sim.t)[0]
+        ti = sc.findinds(self.timepoints, sim.ti)[0]
         prob = self.prob[ti] # Get the proportion of people who will be tested this timestep
         eligible_inds = self.check_eligibility(sim) # Check eligibility
         accept_inds = select_people(eligible_inds, prob=prob) # Find people who accept
         if len(accept_inds):
-            idx = int(sim.t / sim.resfreq)
+            idx = int(sim.ti / sim.resfreq)
             self.n_products_used[idx] += sim.people.scale_flows(accept_inds)
             self.outcomes = self.product.administer(sim, accept_inds) # Actually administer the diagnostic, filtering people into outcome categories
         return accept_inds
@@ -823,14 +823,14 @@ class BaseScreening(BaseTest):
         '''
         self.outcomes = {k:np.array([], dtype=hpd.default_int) for k in self.product.hierarchy}
         accept_inds = np.array([])
-        if sim.t in self.timepoints:
+        if sim.ti in self.timepoints:
             accept_inds = self.deliver(sim)
             sim.people.screened[accept_inds] = True
             sim.people.screens[accept_inds] += 1
-            sim.people.date_screened[accept_inds] = sim.t
+            sim.people.ti_screened[accept_inds] = sim.ti
 
             # Store results
-            idx = int(sim.t / sim.resfreq)
+            idx = int(sim.ti / sim.resfreq)
             new_screen_inds = hpu.ifalsei(sim.people.screened, accept_inds)  # Figure out people who are getting screened for the first time
             n_new_people = sim.people.scale_flows(new_screen_inds)  # Scale
             n_new_screens = sim.people.scale_flows(accept_inds)  # Scale
@@ -856,7 +856,7 @@ class BaseTriage(BaseTest):
     def apply(self, sim):
         self.outcomes = {k:np.array([], dtype=hpd.default_int) for k in self.product.hierarchy}
         accept_inds = np.array([])
-        if sim.t in self.timepoints: accept_inds = self.deliver(sim)
+        if sim.ti in self.timepoints: accept_inds = self.deliver(sim)
         return accept_inds
 
 
@@ -1031,10 +1031,10 @@ class BaseTreatment(Intervention):
         # Store treatment and dates
         sim.people.cin_treated[treat_inds] = True
         sim.people.cin_treatments[treat_inds] += 1
-        sim.people.date_cin_treated[treat_inds] = sim.t
+        sim.people.ti_cin_treated[treat_inds] = sim.ti
 
         # Store results
-        idx = int(sim.t / sim.resfreq)
+        idx = int(sim.ti / sim.resfreq)
         new_treat_inds = hpu.ifalsei(sim.people.cin_treated, treat_inds)  # Figure out people who are getting radiation for the first time
         n_new_cin_treatments = sim.people.scale_flows(treat_inds)  # Scale
         n_new_people = sim.people.scale_flows(new_treat_inds)  # Scale
@@ -1108,16 +1108,16 @@ class treat_delay(BaseTreatment):
         Add people who are willing to accept treatment to the treatment scehduler
         '''
         accept_inds = self.get_accept_inds(sim)
-        if len(accept_inds): self.scheduler[sim.t] = accept_inds
+        if len(accept_inds): self.scheduler[sim.ti] = accept_inds
 
     def get_candidates(self, sim):
         '''
         Get the indices of people who are candidates for treatment
         '''
-        due_time = sim.t-self.delay/sim['dt']
+        due_ti = sim.ti-self.delay/sim['dt']
         treat_candidates = np.array([], dtype=hpd.default_int)
-        if len(self.scheduler[due_time]):
-            treat_candidates = self.scheduler[due_time]
+        if len(self.scheduler[due_ti]):
+            treat_candidates = self.scheduler[due_ti]
         return treat_candidates
 
     def apply(self, sim):
@@ -1174,10 +1174,10 @@ class BaseTxVx(BaseTreatment):
             if n_new_doses:
                 self.outcomes = self.product.administer(sim, accept_inds) # Administer
                 sim.people.tx_vaccinated[accept_inds] = True
-                sim.people.date_tx_vaccinated[accept_inds] = sim.t
+                sim.people.ti_tx_vaccinated[accept_inds] = sim.ti
                 sim.people.txvx_doses[accept_inds] += 1
 
-                idx = int(sim.t / sim.resfreq)
+                idx = int(sim.ti / sim.resfreq)
                 sim.results['new_tx_vaccinated'][idx] += n_new_people
                 sim.results['new_txvx_doses'][idx] += n_new_doses
                 self.n_products_used[idx] += n_new_doses
@@ -1207,7 +1207,7 @@ class routine_txvx(BaseTxVx, RoutineDelivery):
 
     def apply(self, sim):
         accept_inds = np.array([])
-        if sim.t in self.timepoints:
+        if sim.ti in self.timepoints:
             accept_inds = self.deliver(sim)
         return accept_inds
 
@@ -1229,7 +1229,7 @@ class campaign_txvx(BaseTxVx, CampaignDelivery):
 
     def apply(self, sim):
         accept_inds = np.array([])
-        if sim.t in self.timepoints:
+        if sim.ti in self.timepoints:
             accept_inds = self.deliver(sim)
         return accept_inds
 
@@ -1367,11 +1367,11 @@ class tx(Product):
                         people[state][g, eff_treat_inds] = False  # People who get treated have their CINs removed
                         people['episomal'][g, eff_treat_inds] = False  # People who get treated have their CINs removed
                         people['transformed'][g, eff_treat_inds] = False  # People who get treated have their CINs removed
-                        people[f'date_{state}'][g, eff_treat_inds] = np.nan
-                        people[f'date_transformed'][g, eff_treat_inds] = np.nan
-                        people[f'date_cancerous'][g, eff_treat_inds] = np.nan
                         people[f'sev'][g, eff_treat_inds] = np.nan
-                        people['date_clearance'][g, eff_treat_inds] = people.t + 1
+                        people[f'ti_{state}'][g, eff_treat_inds] = np.nan
+                        people[f'ti_transformed'][g, eff_treat_inds] = np.nan
+                        people[f'ti_cancerous'][g, eff_treat_inds] = np.nan
+                        people['ti_clearance'][g, eff_treat_inds] = people.t + 1
                         # Determine whether women also clear infection
                         # clearance_probs = np.full(len(eff_treat_inds), self.clearance, dtype=hpd.default_float)
                         # to_clear = hpu.binomial_arr(clearance_probs)  # Determine who will have effective treatment
@@ -1379,7 +1379,7 @@ class tx(Product):
                         # if len(clear_inds):
                         #     # If so, set date of clearance of infection on next timestep
                         #
-                        #     people.dur_infection[g, clear_inds] = (people.t - people.date_infectious[g, clear_inds]) * people.pars['dt']
+                        #     people.dur_infection[g, clear_inds] = (people.t - people.ti_infectious[g, clear_inds]) * people.pars['dt']
 
         tx_successful = np.array(list(set(tx_successful)))
         tx_unsuccessful = np.setdiff1d(inds, tx_successful)
@@ -1390,10 +1390,10 @@ class tx(Product):
 
         if self.imm_init is not None:
             people.cell_imm[self.imm_source, inds] = hpu.sample(**self.imm_init, size=len(inds))
-            people.t_imm_event[self.imm_source, inds] = people.t
+            people.ti_imm_event[self.imm_source, inds] = people.ti
         elif self.imm_boost is not None:
             people.cell_imm[self.imm_source, inds] *= self.imm_boost
-            people.t_imm_event[self.imm_source, inds] = people.t
+            people.ti_imm_event[self.imm_source, inds] = people.ti
         return output
 
 
@@ -1416,7 +1416,7 @@ class vx(Product):
             people.peak_imm[self.imm_source, inds] = hpu.sample(**self.imm_init, size=len(inds))
         elif self.imm_boost is not None:
             people.peak_imm[self.imm_source, inds] *= self.imm_boost
-        people.t_imm_event[self.imm_source, inds] = people.t
+        people.ti_imm_event[self.imm_source, inds] = people.ti
 
 
 
@@ -1428,15 +1428,15 @@ class radiation(Product):
     def administer(self, sim, inds):
         people = sim.people
         new_dur_cancer = hpu.sample(**self.dur, size=len(inds))
-        people.date_dead_cancer[inds] += np.ceil(new_dur_cancer / people.pars['dt'])
+        people.ti_dead_cancer[inds] += np.ceil(new_dur_cancer / people.pars['dt'])
 
         # Store treatment and dates
         sim.people.cancer_treated[inds] = True
         sim.people.cancer_treatments[inds] += 1
-        sim.people.date_cancer_treated[inds] = sim.t
+        sim.people.ti_cancer_treated[inds] = sim.ti
 
         # Store results
-        idx = int(sim.t / sim.resfreq)
+        idx = int(sim.ti / sim.resfreq)
         new_cctreat_inds = hpu.ifalsei(sim.people.cancer_treated, inds)  # Figure out people who are getting radiation for the first time
         n_new_radiaitons = sim.people.scale_flows(inds)  # Scale
         n_new_people = sim.people.scale_flows(new_cctreat_inds)  # Scale

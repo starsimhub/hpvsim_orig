@@ -36,7 +36,7 @@ def test_screen_prob():
     age_range = [30, 50]
     len_age_range = age_range[1]-age_range[0]
     model_annual_prob = 1 - (1 - target_lifetime_prob)**(1/len_age_range)
-    screen_eligible = lambda sim: np.isnan(sim.people.date_screened) # Only model a single lifetime screen
+    screen_eligible = lambda sim: np.isnan(sim.people.ti_screened) # Only model a single lifetime screen
 
     screen = hpv.routine_screening(
         product='via',
@@ -146,7 +146,7 @@ def test_all_interventions(do_plot=False, do_save=False, fig_path=None):
 
     ### Create interventions
     # Screen, triage, assign treatment, treat
-    screen_eligible = lambda sim: np.isnan(sim.people.date_screened) | (sim.t > (sim.people.date_screened + 5 / sim['dt']))
+    screen_eligible = lambda sim: np.isnan(sim.people.ti_screened) | (sim.ti > (sim.people.ti_screened + 5 / sim['dt']))
     routine_screen = hpv.routine_screening(
         product='hpv',
         prob=0.1,
@@ -267,7 +267,7 @@ def test_all_interventions(do_plot=False, do_save=False, fig_path=None):
         label = 'campaign vx'
     )
 
-    second_dose_eligible = lambda sim: (sim.people.doses == 1) | (sim.t > (sim.people.date_vaccinated + 0.5 / sim['dt']))
+    second_dose_eligible = lambda sim: (sim.people.doses == 1) | (sim.ti > (sim.people.ti_vaccinated + 0.5 / sim['dt']))
     second_dose = hpv.routine_vx(
         prob = 0.1,
         product = 'bivalent2',
@@ -318,7 +318,7 @@ def test_txvx_noscreen(do_plot=False, do_save=False, fig_path=None):
         label = 'campaign txvx'
     )
 
-    second_dose_eligible = lambda sim: (sim.people.txvx_doses == 1) | (sim.t > (sim.people.date_tx_vaccinated + 0.5 / sim['dt']))
+    second_dose_eligible = lambda sim: (sim.people.txvx_doses == 1) | (sim.ti > (sim.people.ti_tx_vaccinated + 0.5 / sim['dt']))
     campaign_txvx_dose2 = hpv.campaign_txvx(
         prob = 0.7,
         years=2030,
@@ -336,7 +336,7 @@ def test_txvx_noscreen(do_plot=False, do_save=False, fig_path=None):
         label = 'routine txvx'
     )
 
-    second_dose_eligible = lambda sim: (sim.people.txvx_doses == 1) | (sim.t > (sim.people.date_tx_vaccinated + 0.5 / sim['dt']))
+    second_dose_eligible = lambda sim: (sim.people.txvx_doses == 1) | (sim.ti > (sim.people.ti_tx_vaccinated + 0.5 / sim['dt']))
     routine_txvx_dose2 = hpv.routine_txvx(
         prob = 0.8,
         start_year = 2031,
@@ -374,7 +374,7 @@ def test_vx_effect(do_plot=False, do_save=False, fig_path=None):
         label = 'Bivalent dose 1'
     )
 
-    second_dose_eligible = lambda sim: (sim.people.doses == 1) | (sim.t > (sim.people.date_vaccinated + 0.5 / sim['dt']))
+    second_dose_eligible = lambda sim: (sim.people.doses == 1) | (sim.ti > (sim.people.ti_vaccinated + 0.5 / sim['dt']))
     routine_vx_dose2 = hpv.routine_vx(
         prob = 0.8,
         start_year = 2023,
@@ -419,7 +419,7 @@ def test_screening():
 
     ### Create interventions
     # Screen, triage, assign treatment, treat
-    screen_eligible = lambda sim: np.isnan(sim.people.date_screened) | (sim.t > (sim.people.date_screened + 5 / sim['dt']))
+    screen_eligible = lambda sim: np.isnan(sim.people.ti_screened) | (sim.ti > (sim.people.ti_screened + 5 / sim['dt']))
     routine_screen = hpv.routine_screening(
         product='via',
         prob=1.0,
@@ -496,7 +496,7 @@ def test_cytology():
 
     # Algorithm 3 (https://www.ncbi.nlm.nih.gov/books/NBK572308/)
 
-    screen_eligible = lambda sim: np.isnan(sim.people.date_screened)# Single lifetime screen
+    screen_eligible = lambda sim: np.isnan(sim.people.ti_screened)# Single lifetime screen
     cytology = hpv.routine_screening(
         product='lbc',
         prob=1.0,

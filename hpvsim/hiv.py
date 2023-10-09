@@ -329,7 +329,7 @@ class HIVsim(hpb.ParsObj):
         self.results['hiv_infections_by_age'][:, idx] += np.histogram(people.age[hiv_inds], bins=people.age_bin_edges, weights=people.scale[hiv_inds])[0]
 
         # Pull out those with cancer and HIV+
-        cancer_today_inds = hpu.true(people.date_cancerous == people.t)
+        cancer_today_inds = hpu.true(people.ti_cancerous == people.t)
         if len(cancer_today_inds):
             hiv_bools = people.hiv[cancer_today_inds]
             cancer_today_hiv_pos_inds = cancer_today_inds[hiv_bools]

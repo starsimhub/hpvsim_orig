@@ -320,7 +320,7 @@ class BaseSim(ParsObj):
             return 0
 
 
-    def get_t(self, dates, exact_match=False, return_date_format=None):
+    def get_ti(self, dates, exact_match=False, return_date_format=None):
         '''
         Convert a string, date/datetime object, or int to a timepoint (int).
 
@@ -334,11 +334,11 @@ class BaseSim(ParsObj):
 
         **Examples**::
         
-            sim.get_t('2015-03-01') # Get the closest timepoint to the specified date
-            sim.get_t(3) # Will return 3
-            sim.get_t('2015') # Can use strings
-            sim.get_t(['2015.5', '2016.5']) # List of strings, will match as close as possible
-            sim.get_t(['2015.5', '2016.5'], exact_match=True) # Raises an error since these dates aren't directly simulated
+            sim.get_ti('2015-03-01') # Get the closest timepoint to the specified date
+            sim.get_ti(3) # Will return 3
+            sim.get_ti('2015') # Can use strings
+            sim.get_ti(['2015.5', '2016.5']) # List of strings, will match as close as possible
+            sim.get_ti(['2015.5', '2016.5'], exact_match=True) # Raises an error since these dates aren't directly simulated
         '''
 
         if sc.isstring(dates) or not sc.isiterable(dates):
@@ -619,7 +619,7 @@ class BaseSim(ParsObj):
         resdict = {k:v for k,v in resdict.items() if v.ndim == 1}
         df = sc.dataframe.from_dict(resdict)
         df['year'] = self.res_yearvec
-        new_columns = ['t','year'] + df.columns[1:-1].tolist() # Get column order
+        new_columns = ['t','year'] + df.columns[1:-1].tolist() # Get column order (DJK t or ti?)
         df = df.reindex(columns=new_columns) # Reorder so 't' and 'date' are first
         if date_index:
             df = df.set_index('year')
@@ -924,7 +924,7 @@ class BasePeople(FlexPretty):
         self.set_pars(pars)
         self.version = __version__ # Store version info
         self.contacts = None
-        self.t = 0 # Keep current simulation time
+        self.ti = 0 # Keep current simulation time step
 
         # Private variables relaying to dynamic allocation
         self._data = dict()
@@ -1488,9 +1488,9 @@ class BasePeople(FlexPretty):
     def intv_keys(self):
         return [state.name for state in self.meta.intv_states]
 
-    def date_keys(self):
+    def timepoint_keys(self):
         ''' Returns keys for different event dates (e.g., date a person became symptomatic) '''
-        return [state.name for state in self.meta.dates]
+        return [state.name for state in self.meta.timepoints]
 
     def dur_keys(self):
         ''' Returns keys for different durations (e.g., the duration from exposed to infectious) '''
@@ -1502,7 +1502,7 @@ class BasePeople(FlexPretty):
             keys = list(self.contacts.keys())
         except: # If not fully initialized
             try:
-                keys = list(self.pars['acts'].keys())
+                keys = list(self.pars['act_rate'].keys())
             except:  # pragma: no cover # If not even partially initialized
                 keys = []
         return keys
@@ -1620,17 +1620,17 @@ class BasePeople(FlexPretty):
         '''
 
         # Check if we're trying to save an already run People object
-        if self.t > 0 and not force:
+        if self.ti > 0 and not force:
             errormsg = f'''
-The People object has already been run (t = {self.t}), which is usually not the
-correct state to save it in since it cannot be re-initialized. If this is intentional,
-use sim.people.save(force=True). Otherwise, the correct approach is:
+                The People object has already been run (ti = {self.ti}), which is usually not the
+                correct state to save it in since it cannot be re-initialized. If this is intentional,
+                use sim.people.save(force=True). Otherwise, the correct approach is:
 
-    sim = hpv.Sim(...)
-    sim.initialize() # Create the people object but do not run
-    sim.people.save() # Save people immediately after initialization
-    sim.run() # The People object is
-'''
+                    sim = hpv.Sim(...)
+                    sim.initialize() # Create the people object but do not run
+                    sim.people.save() # Save people immediately after initialization
+                    sim.run() # The People object is
+                '''
             raise RuntimeError(errormsg)
 
         # Handle the filename
@@ -1784,14 +1784,14 @@ class Person(sc.prettyobj):
     is now based on arrays rather than being a list of people.
     '''
     def __init__(self, pars=None, uid=None, age=-1, sex=-1, debut=-1, rel_sev=-1, partners=None, current_partners=None,
-                 rship_start_dates=None, rship_end_dates=None, n_rships=None):
+                 rship_start_tis=None, rship_end_ti=None, n_rships=None):
         self.uid                = uid # This person's unique identifier
         self.age                = hpd.default_float(age) # Age of the person (in years)
         self.sex                = hpd.default_int(sex) # Female (0) or male (1)
         self.partners           = partners # Preferred number of partners
         self.current_partners   = current_partners # Number of current partners
-        self.rship_start_dates  = rship_start_dates # Timepoint at which most recent relationship began
-        self.rship_end_dates    = rship_end_dates # Timepoint of most recent breakup/relationship dissolution
+        self.rship_start_tis  = rship_start_tis # Timepoint at which most recent relationship began
+        self.rship_end_ti    = rship_end_ti # Timepoint of most recent breakup/relationship dissolution
         self.n_rships           = n_rships # Total number of relationships during the simulation
         self.debut              = hpd.default_float(debut) # Age of sexual debut
         self.rel_sev            = hpd.default_float(rel_sev) # Relative severity
@@ -1934,7 +1934,7 @@ class Layer(FlexDict):
     Args:
         f (array): an array of N connections, representing people on one side of the connection
         m (array): an array of people on the other side of the connection
-        acts (array): an array of number of acts per timestep for each connection
+        acts (array): an array of number of acts per year for each connection
         dur (array): duration of the connection
         start (array): start time of the connection
         end (array): end time of the connection
@@ -1966,12 +1966,12 @@ class Layer(FlexDict):
         self.meta = {
             'f':     hpd.default_int,   # Female
             'm':     hpd.default_int,   # Male
-            'acts':  hpd.default_float, # Default transmissibility for this contact type
+            'acts_per_year':  hpd.default_float, # Default peak number of acts per year
             'dur':   hpd.default_float, # Duration of partnership
-            'start': hpd.default_int, # Date of partnership start
-            'end':   hpd.default_float, # Date of partnership end
-            'age_f': hpd.default_float,  # Age of female partner
-            'age_m': hpd.default_float,  # Age of male partner
+            'start': hpd.default_float,   # Year of partnership start
+            'end':   hpd.default_float,   # Year of partnership end
+            'age_f': hpd.default_float, # Age of female partner
+            'age_m': hpd.default_float, # Age of male partner
         }
         self.basekey = 'f' # Assign a base key for calculating lengths and performing other operations
         self.label = label
@@ -1988,9 +1988,9 @@ class Layer(FlexDict):
             self[key] = np.array(value, dtype=self.meta.get(key))
 
         # Set acts if not provided
-        key = 'acts'
+        key = 'acts_per_year'
         if key not in kwargs.keys():
-            self[key] = np.ones(len(self), dtype=self.meta[key])
+            self[key] = np.ones(len(self), dtype=self.meta[key]) # DJK: 1 is a bad default for annual act rate
 
         return
 
