@@ -319,7 +319,7 @@ def get_genotype_pars(default=False, genotype=None):
     pars = sc.objdict()
 
     # Find parameters from Guanacaste cohort data
-    # Unpublished figure by Schiffman shows 70% persist for 1 year, 86% for 3 years
+    # Unpublished figure by Schiffman shows 70% clear within 1 year, 86% within 3 years
     s, scale = ut.logn_percentiles_to_pars(1, 0.7, 3, 0.86)
     rv = lognorm(s=s, scale=scale)
     par1 = rv.mean()
