@@ -78,7 +78,7 @@ class outcomes_by_year(hpv.Analyzer):
                 scale = sim.people.scale[inf_inds]
                 time_to_clear = (sim.people.date_clearance[idx] - sim.t)*sim['dt']
                 time_to_cancer = (sim.people.date_cancerous[idx] - sim.t)*sim['dt']
-                time_to_cin = (sim.people.date_cin[idx] - sim.t)*sim['dt']
+                time_to_cin = (sim.people.date_cin1[idx] - sim.t)*sim['dt']
 
                 # Count deaths. Note that there might be more people with a defined
                 # cancer death date than with a defined cancer date because this is
@@ -184,7 +184,7 @@ def lognorm_params(par1, par2):
     shape = sigma
     return shape, scale
 
-def plot_nh(sim=None):
+def plot_stacked(sim=None):
 
     res = sim.analyzers[1].results
     years = sim.analyzers[1].durations
@@ -234,6 +234,9 @@ def plot_nh(sim=None):
     fig.savefig(f'dist_infections.png')
     fig.show()
 
+    return
+
+def plot_nh(sim=None):
     # Make sims
     genotypes = ['hpv16', 'hpv18', 'hi5']
     glabels = ['HPV16', 'HPV18', 'HI5']
@@ -356,8 +359,6 @@ def plot_nh(sim=None):
     fig.tight_layout()
     fig.savefig(f'nathx.png')
     fig.show()
-
-    return
 
 
 def plot_nh_simple(sim=None):
@@ -501,6 +502,7 @@ if __name__ == '__main__':
             sim = sc.loadobj(f'{location}.sim')
 
 
-        plot_nh(sim)
+        plot_stacked(sim)
+        # plot_nh(sim)
 
     print('Done.')
