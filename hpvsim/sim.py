@@ -800,18 +800,16 @@ class Sim(hpb.BaseSim):
 
                 f_source_inds = (inf[g][f] & sus[g][m]).nonzero()[0]  # get female sources where female partner is infectious with genotype and male partner is susceptible to that genotype
                 m_source_inds = (inf[g][m] & sus[g][f]).nonzero()[0]  # get male sources where the male partner is infectious with genotype and the female partner is susceptible to that genotype
-
-                foi_frac = 1 - frac_acts * gen_betas[g] * trans[:, None] * (1 - effective_condoms)  # Probability of not getting infected from any fractional acts
-                foi_whole = (1 - gen_betas[g] * trans[:, None] * (1 - effective_condoms)) ** whole_acts  # Probability of not getting infected from whole acts
-                foi = (1 - (foi_whole * foi_frac)).astype(hpd.default_float)
-
-                discordant_pairs = [[f_source_inds, f[f_source_inds], m[f_source_inds], foi[0,:]],
-                                    [m_source_inds, m[m_source_inds], f[m_source_inds], foi[1,:]]]
+                discordant_pairs = [[f_source_inds, f[f_source_inds], m[f_source_inds]],
+                                    [m_source_inds, m[m_source_inds], f[m_source_inds]]]
 
                 # Compute transmissibility for each partnership
-                for pship_inds, sources, targets, this_foi in discordant_pairs:
-                    betas = this_foi[pship_inds] * (1. - sus_imm[g,targets]) * rel_sus[targets] # Pull out the transmissibility associated with this partnership
-                    transmissions = (np.random.random(len(betas)) < betas).nonzero()[0] # Apply probabilities to determine partnerships in which transmission occurred
+                for ig, (pship_inds, sources, targets) in enumerate(discordant_pairs):
+                    foi_frac = 1 - frac_acts[pship_inds] * gen_betas[g] * trans[ig] * (1 - effective_condoms)* (1. - sus_imm[g,targets])* rel_sus[targets]  # Probability of not getting infected from any fractional acts
+                    foi_whole = (1 - gen_betas[g] * trans[ig] * (1 - effective_condoms)* (1. - sus_imm[g,targets])* rel_sus[targets]) ** whole_acts[pship_inds]  # Probability of not getting infected from whole acts
+                    foi = (1 - (foi_whole * foi_frac)).astype(hpd.default_float)
+
+                    transmissions = (np.random.random(len(foi)) < foi).nonzero()[0] # Apply probabilities to determine partnerships in which transmission occurred
                     target_inds   = targets[transmissions] # Extract indices of those who got infected
                     target_inds, unique_inds = np.unique(target_inds, return_index=True)  # Due to multiple partnerships, some people will be counted twice; remove them
                     people.infect(inds=target_inds, g=g, layer=lkey)  # Infect people
