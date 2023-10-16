@@ -1371,7 +1371,7 @@ class tx(Product):
                         people[f'ti_{state}'][g, eff_treat_inds] = np.nan
                         people[f'ti_transformed'][g, eff_treat_inds] = np.nan
                         people[f'ti_cancerous'][g, eff_treat_inds] = np.nan
-                        people['ti_clearance'][g, eff_treat_inds] = people.t + 1
+                        people['ti_clearance'][g, eff_treat_inds] = people.ti + 1
                         # Determine whether women also clear infection
                         # clearance_probs = np.full(len(eff_treat_inds), self.clearance, dtype=hpd.default_float)
                         # to_clear = hpu.binomial_arr(clearance_probs)  # Determine who will have effective treatment
