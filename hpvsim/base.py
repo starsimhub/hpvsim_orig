@@ -351,7 +351,7 @@ class BaseSim(ParsObj):
 
             # If it's an integer, make sure it's in the sim tvec
             if sc.checktype(date, int):
-                if date in self.tvec:
+                if date in self.tivec:
                     tp = date
                 else:
                     errormsg = f'The requested timepoint {date} must be within the sim tvec: {self.tvec[0], self.tvec[-1]}.'

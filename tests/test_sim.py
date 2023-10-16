@@ -88,7 +88,7 @@ def test_epi():
     par_effects = [
         ParEffects('beta',          [0.01, 0.99],   ['infections']),
         ParEffects('condoms',       [0.90, 0.10],   ['infections']),
-        ParEffects('acts',          [1, 200],       ['infections']),
+        ParEffects('act_rate',      [1, 200],       ['infections']),
         ParEffects('debut',         [25, 15],       ['infections']),
         ParEffects('init_hpv_prev', [0.1, 0.8],     ['infections']),
     ]
@@ -96,7 +96,7 @@ def test_epi():
     # Loop over each of the above parameters and make sure they affect the epi dynamics in the expected ways
     for par_effect in par_effects:
     # for vpar,vval,vrel,vwhat in zip(vary_pars, vary_vals, vary_rels, vary_what):
-        if par_effect.par=='acts':
+        if par_effect.par=='act_rate':
             bp = sc.dcp(sim[par_effect.par]['c'])
             lo = {lk:{**bp, 'par1': par_effect.range[0]} for lk in ['m','c','o']}
             hi = {lk:{**bp, 'par1': par_effect.range[1]} for lk in ['m','c','o']}
@@ -311,7 +311,7 @@ def test_flexible_inputs():
     sim.reset_layer_pars() # Restore
 
     # Check mismatch with population
-    for key in ['acts', 'condoms']:
+    for key in ['act_rate', 'condoms']:
         sim[key] = {'invalid':1}
     with pytest.raises(sc.KeyNotFoundError):
         sim.validate_pars()
