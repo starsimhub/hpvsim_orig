@@ -193,7 +193,7 @@ def test_complex_scenarios(do_plot=do_plot, do_save=False, fig_path=None):
         'high': {
             'name': 'Higher-risk sexual behavior',
             'pars': {
-                'acts': dict(m=dict(dist='neg_binomial', par1=120, par2=40),
+                'act_rate': dict(m=dict(dist='neg_binomial', par1=120, par2=40),
                              c=dict(dist='neg_binomial', par1=20, par2=5),
                              o=dict(dist='neg_binomial', par1=20, par2=5),
                              ),
@@ -205,7 +205,7 @@ def test_complex_scenarios(do_plot=do_plot, do_save=False, fig_path=None):
         'low': {
             'name': 'Lower-risk sexual behavior',
             'pars': {
-                'acts': dict(m=dict(dist='neg_binomial', par1=40, par2=10),
+                'act_rate': dict(m=dict(dist='neg_binomial', par1=40, par2=10),
                              c=dict(dist='neg_binomial', par1=2, par2=1),
                              o=dict(dist='neg_binomial', par1=1, par2=1),
                              ),
