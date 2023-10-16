@@ -649,7 +649,7 @@ class age_results(Analyzer):
 
             # Check that the requested timepoints are in the sim
             max_hist_time = rdict.timepoints[-1]
-            max_sim_time = sim.tvec[-1]
+            max_sim_time = sim.tivec[-1]
             if max_hist_time > max_sim_time:
                 errormsg = f'Cannot create age results for {rdict.years[-1]} ({max_hist_time}) because the simulation ends on {self.end} ({max_sim_time})'
                 raise ValueError(errormsg)
