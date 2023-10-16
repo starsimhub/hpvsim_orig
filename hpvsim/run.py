@@ -957,7 +957,7 @@ class Scenarios(hpb.ParsObj):
 
         # Copy quantities from the base sim to the main object
         self.npts       = self.base_sim.npts
-        self.tvec       = self.base_sim.tvec
+        self.tivec       = self.base_sim.tivec
         self.yearvec    = self.base_sim.yearvec
         self['verbose'] = self.base_sim['verbose']
         self.res_npts       = self.base_sim.res_npts
