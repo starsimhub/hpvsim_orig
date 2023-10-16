@@ -1238,7 +1238,7 @@ class Scenarios(hpb.ParsObj):
             or writes the JSON file to disk
 
         '''
-        d = {'t':self.tvec,
+        d = {'t':self.tivec,
              'results':   self.results,
              'basepars':  self.basepars,
              'metapars':  self.metapars,
