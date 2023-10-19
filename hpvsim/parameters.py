@@ -64,8 +64,8 @@ def make_pars(**kwargs):
     pars['hiv_pars']        = sc.objdict()  # Can be directly modified by passing in arguments listed in hiv_pars
 
     # Network parameters, generally initialized after the population has been constructed
-    pars['debut']           = dict(f=dict(dist='normal', par1=17.5, par2=2.1), # Location-specific data should be used here if possible
-                                   m=dict(dist='normal', par1=19.0, par2=1.8))
+    pars['debut']           = dict(f=dict(dist='normal', par1=14.8, par2=2.1), # Location-specific data should be used here if possible
+                                   m=dict(dist='normal', par1=17.0, par2=1.8))
     pars['cross_layer']     = 0.05  # Proportion of females who have crosslayer relationships
     pars['partners']        = None  # The number of concurrent sexual partners for each partnership type
     pars['acts']            = None  # The number of sexual acts for each partnership type per year
@@ -76,7 +76,7 @@ def make_pars(**kwargs):
     pars['n_partner_types'] = 1  # Number of partnership types - reset below
 
     # Basic disease transmission parameters
-    pars['beta']                = 0.35  # Per-act transmission probability; absolute value, calibrated
+    pars['beta']                = 0.2  # Per-act transmission probability; absolute value, calibrated
     pars['transf2m']            = 1.0   # Relative transmissibility of receptive partners in penile-vaginal intercourse; baseline value
     pars['transm2f']            = 3.69  # Relative transmissibility of insertive partners in penile-vaginal intercourse; based on https://doi.org/10.1038/srep10986: "For vaccination types, the risk of male-to-female transmission was higher than that of female-to-male transmission"
     pars['eff_condoms']         = 0.5   # The efficacy of condoms; https://www.nejm.org/doi/10.1056/NEJMoa053284?url_ver=Z39.88-2003&rfr_id=ori:rid:crossref.org&rfr_dat=cr_pub%20%200www.ncbi.nlm.nih.gov
@@ -166,8 +166,8 @@ def reset_layer_pars(pars, layer_keys=None, force=False):
 
     # Specify defaults for basic sexual network with marital, casual, and one-off partners
     layer_defaults['default'] = dict(
-        partners    = dict(m=dict(dist='poisson', par1=0.01), # Everyone in this layer has one marital partner; this captures *additional* marital partners. If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 spouse
-                           c=dict(dist='poisson', par1=0.2), # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 casual partner at a time
+        partners    = dict(m=dict(dist='poisson', par1=0.05), # Everyone in this layer has one marital partner; this captures *additional* marital partners. If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 spouse
+                           c=dict(dist='poisson', par1=0.3), # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 casual partner at a time
                            o=dict(dist='poisson', par1=0.0),), # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 one-off partner at a time. Can be set to zero since these relationships only last a single timestep
         acts         = dict(m=dict(dist='neg_binomial', par1=80, par2=40), # Default number of acts per year for people at sexual peak
                             c=dict(dist='neg_binomial', par1=10, par2=5), # Default number of acts per year for people at sexual peak
@@ -175,9 +175,9 @@ def reset_layer_pars(pars, layer_keys=None, force=False):
         age_act_pars = dict(m=dict(peak=30, retirement=100, debut_ratio=0.5, retirement_ratio=0.1), # Parameters describing changes in coital frequency over agent lifespans
                             c=dict(peak=25, retirement=100, debut_ratio=0.5, retirement_ratio=0.1),
                             o=dict(peak=25, retirement=100, debut_ratio=0.5, retirement_ratio=0.1)),
-        dur_pship   = dict(m=dict(dist='normal_pos', par1=12, par2=3),
-                           c=dict(dist='normal_pos', par1=1, par2=1),
-                           o=dict(dist='normal_pos', par1=0.1, par2=0.05)),
+        dur_pship   = dict(m=dict(dist='normal_pos', par1=15, par2=3),
+                            c=dict(dist='normal_pos', par1=1, par2=1),
+                            o=dict(dist='normal_pos', par1=0.5, par2=1)),
         condoms     = dict(m=0.01, c=0.2, o=0.1),  # Default proportion of acts in which condoms are used
     )
     layer_defaults['default']['mixing'], layer_defaults['default']['layer_probs'] = get_mixing('default')
@@ -468,79 +468,85 @@ def get_mixing(network=None):
 
         mixing = dict(
             m=np.array([
-            #       0,  5,  10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75
-            [ 0,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [ 5,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [10,    0,  0, .1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [15,    0,  0, .1, .1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [20,    0,  0, .1, .1, .1, .1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [25,    0,  0, .5, .1, .5 ,.1, .1,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [30,    0,  0,  1, .5, .5, .5, .5, .1,  0,  0,  0,  0,  0,  0,  0,  0],
-            [35,    0,  0, .5,  1,  1, .5,  1,  1, .5,  0,  0,  0,  0,  0,  0,  0],
-            [40,    0,  0,  0, .5,  1,  1,  1,  1,  1, .5,  0,  0,  0,  0,  0,  0],
-            [45,    0,  0,  0,  0, .1,  1,  1,  2,  1,  1, .5,  0,  0,  0,  0,  0],
-            [50,    0,  0,  0,  0,  0, .1,  1,  1,  1,  1,  2, .5,  0,  0,  0,  0],
-            [55,    0,  0,  0,  0,  0,  0, .1,  1,  1,  1,  1,  2, .5,  0,  0,  0],
-            [60,    0,  0,  0,  0,  0,  0,  0, .1, .5,  1,  1,  1,  2, .5,  0,  0],
-            [65,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  2, .5,  0],
-            [70,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1, .5],
-            [75,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1],
-        ]),
+                #       0,  5,  10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [10, 0, 0, .1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [15, 0, 0, .1, .1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [20, 0, 0, .1, .1, .1, .1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [25, 0, 0, .5, .1, .5, .1, .1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [30, 0, 0, 1, .5, .5, .5, .5, .1, 0, 0, 0, 0, 0, 0, 0, 0],
+                [35, 0, 0, .5, 1, 1, .5, 1, 1, .5, 0, 0, 0, 0, 0, 0, 0],
+                [40, 0, 0, 0, .5, 1, 1, 1, 1, 1, .5, 0, 0, 0, 0, 0, 0],
+                [45, 0, 0, 0, 0, .1, 1, 1, 2, 1, 1, .5, 0, 0, 0, 0, 0],
+                [50, 0, 0, 0, 0, 0, .1, 1, 1, 1, 1, 2, .5, 0, 0, 0, 0],
+                [55, 0, 0, 0, 0, 0, 0, .1, 1, 1, 1, 1, 2, .5, 0, 0, 0],
+                [60, 0, 0, 0, 0, 0, 0, 0, .1, .5, 1, 1, 1, 2, .5, 0, 0],
+                [65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 2, .5, 0],
+                [70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, .5],
+                [75, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+            ]),
             c=np.array([
-            #       0,  5,  10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75
-            [ 0,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [ 5,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [10,    0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [15,    0,  0,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [20,    0,  0,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [25,    0,  0, .5,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0,  0,  0],
-            [30,    0,  0,  0, .5,  1,  1,  1, .5,  0,  0,  0,  0,  0,  0,  0,  0],
-            [35,    0,  0,  0, .5,  1,  1,  1,  1, .5,  0,  0,  0,  0,  0,  0,  0],
-            [40,    0,  0,  0,  0, .5,  1,  1,  1,  1, .5,  0,  0,  0,  0,  0,  0],
-            [45,    0,  0,  0,  0,  0,  1,  1,  1,  1,  1, .5,  0,  0,  0,  0,  0],
-            [50,    0,  0,  0,  0,  0, .5,  1,  1,  1,  1,  1, .5,  0,  0,  0,  0],
-            [55,    0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1, .5,  0,  0,  0],
-            [60,    0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1, .5,  0,  0],
-            [65,    0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  2, .5,  0],
-            [70,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1, .5],
-            [75,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1],
-        ]),
+                #       0,  5,  10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [10, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [15, 0, 0, 1, 1, 1, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [20, 0, 0, .5, 1, 1, 1, 1.0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [25, 0, 0, 0, 1, 1, 1, 1.0, 1.0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [30, 0, 0, 0, .5, 1, 1, 1, .5, 0, 0, 0, 0, 0, 0, 0, 0],
+                [35, 0, 0, 0, .5, 1, 1, 1, 1, .5, 0, 0, 0, 0, 0, 0, 0],
+                [40, 0, 0, 0, 0, .5, 1, 1, 1, 1, .5, 0, 0, 0, 0, 0, 0],
+                [45, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, .5, 0, 0, 0, 0, 0],
+                [50, 0, 0, 0, 0, 0, 0.5, 1, 1, 1, 1, 1, .5, 0, 0, 0, 0],
+                [55, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, .5, 0, 0, 0],
+                [60, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, .5, 0, 0],
+                [65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, .5, 0],
+                [70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, .5],
+                [75, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+            ]),
             o=np.array([
-            #       0,  5,  10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75
-            [ 0,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [ 5,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [10,    0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [15,    0,  0,  1,  1, .5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [20,    0,  0, .5,  1,  1, .5,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [25,    0,  0,  0,  1,  1,  1, .5,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-            [30,    0,  0,  0,  0,  1,  1,  1, .5,  0,  0,  0,  0,  0,  0,  0,  0],
-            [35,    0,  0,  0,  0,  1,  1,  1,  1, .5,  0,  0,  0,  0,  0,  0,  0],
-            [40,    0,  0,  0,  0,  0,  1,  1,  1,  1, .5,  0,  0,  0,  0,  0,  0],
-            [45,    0,  0,  0,  0,  0,  1,  1,  1,  1,  1, .5,  0,  0,  0,  0,  0],
-            [50,    0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1, .5,  0,  0,  0,  0],
-            [55,    0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1, .5,  0,  0,  0],
-            [60,    0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1, .5,  0,  0],
-            [65,    0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  2, .5,  0],
-            [70,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1, .5],
-            [75,    0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  1,  1,  1,  1,  1],
-        ]),
+                #       0,  5,  10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [10, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [15, 0, 0, 1, 1, .5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [20, 0, 0, .5, 1, 1, .5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [25, 0, 0, 0, 1, 1, 1, .5, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [30, 0, 0, 0, 0, 1, 1, 1, .5, 0, 0, 0, 0, 0, 0, 0, 0],
+                [35, 0, 0, 0, 0, 1, 1, 1, 1, .5, 0, 0, 0, 0, 0, 0, 0],
+                [40, 0, 0, 0, 0, 0, 1, 1, 1, 1, .5, 0, 0, 0, 0, 0, 0],
+                [45, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, .5, 0, 0, 0, 0, 0],
+                [50, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, .5, 0, 0, 0, 0],
+                [55, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, .5, 0, 0, 0],
+                [60, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, .5, 0, 0],
+                [65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, .5, 0],
+                [70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, .5],
+                [75, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+            ]),
         )
 
         layer_probs = dict(
             m=np.array([
-                [ 0,  5,    10,    15,   20,   25,   30,   35,    40,    45,    50,   55,   60,   65,   70,   75],
-                [ 0,  0,  0.04,   0.1,  0.1,  0.5,  0.6,  0.7,  0.75,  0.65,  0.55,  0.4,  0.4,  0.4,  0.4,  0.4], # Share of females of each age who are married
-                [ 0,  0,  0.01,  0.01,  0.1,  0.5,  0.6,  0.7,  0.70,  0.70,  0.70,  0.8,  0.7,  0.6,  0.5,  0.6]] # Share of males of each age who are married
+                [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75],
+                [0, 0, 0, 0.05, 0.25, 0.35, 0.3, 0.2, 0.1, 0.05, 0.01, 0.005, 0.005, 0.001, 0.001, 0.001],
+                # Share of females of each age who are married
+                [0, 0, 0, 0.01, 0.25, 0.35, 0.3, 0.2, 0.1, 0.05, 0.01, 0.005, 0.005, 0.001, 0.001, 0.001]]
+                # Share of males of each age who are married
             ),
             c=np.array([
-                [ 0,  5,    10,    15,   20,   25,   30,   35,    40,    45,    50,   55,   60,   65,   70,   75],
-                [ 0,  0,  0.10,   0.7,  0.8,  0.6,  0.6,  0.4,   0.1,  0.05,  0.001, 0.001, 0.001, 0.001, 0.001, 0.001], # Share of females of each age having casual relationships
-                [ 0,  0,  0.05,   0.7,  0.8,  0.6,  0.6,  0.4,   0.4,   0.3,   0.2,  0.1, 0.05, 0.01, 0.01, 0.01]], # Share of males of each age having casual relationships
+                [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75],
+                [0, 0, 0.10, 0.7, 0.8, 0.6, 0.6, 0.5, 0.2, 0.05, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01],
+                # Share of females of each age having casual relationships
+                [0, 0, 0.05, 0.7, 0.8, 0.6, 0.6, 0.5, 0.5, 0.4, 0.3, 0.1, 0.05, 0.01, 0.01, 0.01]],
+                # Share of males of each age having casual relationships
             ),
             o=np.array([
-                [ 0,  5,    10,    15,   20,   25,   30,   35,    40,    45,    50,   55,   60,   65,   70,   75],
-                [ 0,  0,  0.01,  0.05, 0.05, 0.04, 0.03, 0.02,  0.01,  0.01,  0.01, 0.01, 0.01, 0.01, 0.01, 0.01], # Share of females of each age having one-off relationships
-                [ 0,  0,  0.01,  0.01, 0.01, 0.02, 0.03, 0.04,  0.05,  0.05,  0.03, 0.02, 0.01, 0.01, 0.01, 0.01]], # Share of males of each age having one-off relationships
+                [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75],
+                [0, 0, 0.01, 0.05, 0.05, 0.04, 0.03, 0.02, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01],
+                # Share of females of each age having one-off relationships
+                [0, 0, 0.01, 0.01, 0.01, 0.02, 0.03, 0.04, 0.05, 0.05, 0.03, 0.02, 0.01, 0.01, 0.01, 0.01]],
+                # Share of males of each age having one-off relationships
             ),
         )
 
