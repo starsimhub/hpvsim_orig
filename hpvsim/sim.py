@@ -136,6 +136,10 @@ class Sim(hpb.BaseSim):
         layer_pars = hppar.layer_pars # The names of the parameters that are specified by layer
         for lp in layer_pars:
             val = self[lp]
+
+            if lp == 'layer_probs': # adjust participation rate by simulation timestep
+                for _, lpp in val.items():
+                    lpp[1:,:] *= self['dt']
             if sc.isnumber(val): # It's a scalar instead of a dict, assume it's all contacts
                 self[lp] = {k:val for k in layer_keys}
 
