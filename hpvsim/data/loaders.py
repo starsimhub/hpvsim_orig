@@ -181,11 +181,6 @@ def get_age_distribution(location=None, year=None, total_pop_file=None):
 
     # Optinally save total population sizes for calibration/plotting purposes
     if total_pop_file is not None:
-        import traceback
-        traceback.print_exc()
-        import pdb
-        pdb.set_trace()
-
         dd = full_df.groupby("Time").sum()["PopMale", "PopFemale"]
         dd = dd * 1e3
         dd = dd.astype(int)
