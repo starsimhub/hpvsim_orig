@@ -43,8 +43,9 @@ def test_sim(do_plot=False, do_save=False, do_run=True, **kwargs): # If being ru
 
     # Create and run the simulation
     pars = {
-        'n_agents': 5e3,
-        'total_pop': 200_000,
+        'n_agents': 10e3,
+        'location': 'india',
+        'sex_ratio': 1-907/(907+1000),
         'start': 1970,
         'burnin': 30,
         'end': 2030,
@@ -409,7 +410,7 @@ if __name__ == '__main__':
     T = sc.tic()
 
     # sim0 = test_microsim()
-    sim1 = test_sim(do_plot=do_plot, do_save=do_save)
+    sim = test_sim(do_plot=do_plot, do_save=do_save)
     # s0, s1 = test_epi()
     # sim3 = test_states()
     # sim4 = test_flexible_inputs()

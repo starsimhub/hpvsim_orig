@@ -87,7 +87,7 @@ def get_UN_data(label='', file_stem=None, outfile=None, columns=None, force=None
 
 def get_age_data(force=None, tidy=None):
     ''' Import population sizes by age from UNPD '''
-    columns = ["Location", "Time", "AgeGrpStart", "PopTotal"]
+    columns = ["Location", "Time", "AgeGrpStart", "PopMale", "PopFemale"]
     outfile = 'populations.obj'
     kw = dict(label='age', file_stem=age_stem, outfile=outfile, columns=columns, force=force, tidy=tidy)
     return get_UN_data(**kw)

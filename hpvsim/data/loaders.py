@@ -177,11 +177,16 @@ def get_age_distribution(location=None, year=None, total_pop_file=None):
     raw_df = full_df[full_df["Time"] == year]
 
     # Pull out the data
-    result = np.array([raw_df["AgeGrpStart"],raw_df["AgeGrpStart"]+1,raw_df["PopTotal"]*1e3]).T # Data are stored in thousands
+    result = np.array([raw_df["AgeGrpStart"],raw_df["AgeGrpStart"]+1,raw_df["PopMale"]*1e3,raw_df["PopFemale"]*1e3]).T # Data are stored in thousands
 
     # Optinally save total population sizes for calibration/plotting purposes
     if total_pop_file is not None:
-        dd = full_df.groupby("Time").sum()["PopTotal"]
+        import traceback
+        traceback.print_exc()
+        import pdb
+        pdb.set_trace()
+
+        dd = full_df.groupby("Time").sum()["PopMale", "PopFemale"]
         dd = dd * 1e3
         dd = dd.astype(int)
         dd = dd.rename("n_alive")
@@ -213,7 +218,8 @@ def get_age_distribution_over_time(location=None):
     # Extract the age distribution for the given location and year
     full_df = map_entries(df, location)[location]
     result = full_df.rename(columns={'Time':'year', 'AgeGrpStart': 'age'})
-    result['PopTotal'] *= 1e3 # reported as per 1,000
+    result['PopMale'] *= 1e3 # reported as per 1,000
+    result['PopFemale'] *= 1e3
 
     return result
 
@@ -238,9 +244,9 @@ def get_total_pop(location=None):
 
     # Extract the age distribution for the given location and year
     full_df = map_entries(df, location)[location]
-    dd = full_df.groupby("Time").sum(numeric_only=True)["PopTotal"]
+    dd = full_df.groupby("Time").sum(numeric_only=True)[["PopMale", "PopFemale"]]
     dd = dd * 1e3
-    df = sc.dataframe(dd).reset_index().rename(columns={'Time':'year', 'PopTotal':'pop_size'})
+    df = sc.dataframe(dd).reset_index().rename(columns={'Time':'year', 'PopFemale':'pop_size_f', 'PopMale':'pop_size_m'})
     return df
 
 

@@ -625,7 +625,11 @@ class People(hpb.BasePeople):
             sim_start = self.pars['start']
             sim_pop0 = self.pars['n_agents']
             data_years = self.pop_trend.year.values
-            data_pop = self.pop_trend.pop_size.values
+            data_pop_dict = dict(
+                m=self.pop_trend.pop_size_m.values,
+                f=self.pop_trend.pop_size_f.values,
+                t=self.pop_trend.pop_size_f.values+self.pop_trend.pop_size_m.values,
+            )
             data_min = data_years[0]
             data_max = data_years[-1]
             age_dist_data = self.pop_age_trend[self.pop_age_trend.year == int(year)]
@@ -639,31 +643,42 @@ class People(hpb.BasePeople):
                 errormsg = 'Starting the sim earlier than the data is not hard, but has not been done yet'
                 raise NotImplementedError(errormsg)
 
-            # Do basic calculations
-            data_pop0 = np.interp(sim_start, data_years, data_pop)
-            scale = sim_pop0 / data_pop0 # Scale factor
-            alive_inds = hpu.true(self.alive_level0)
-            alive_ages = self.age[alive_inds].astype(int) # Return ages for everyone level 0 and alive
-            count_ages = np.bincount(alive_ages, minlength=age_dist_data.shape[0]) # Bin and count them
-            expected = age_dist_data['PopTotal'].values*scale # Compute how many of each age we would expect in population
-            difference = (expected-count_ages).astype(int) # Compute difference between expected and simulated for each age
-            n_migrate = np.sum(difference) # Compute total migrations (in and out)
-            ages_to_remove = hpu.true(difference<0) # Ages where we have too many, need to apply emigration
-            n_to_remove = difference[ages_to_remove] # Determine number of agents to remove for each age
-            ages_to_add = hpu.true(difference>0) # Ages where we have too few, need to apply imigration
-            n_to_add = difference[ages_to_add] # Determine number of agents to add for each age
-            ages_to_add_list = np.repeat(ages_to_add, n_to_add)
-            self.add_births(new_births=len(ages_to_add_list), ages=np.array(ages_to_add_list), sex_ratio=self.pars['sex_ratio_imm'])
 
-            # Remove people
-            remove_frac = n_to_remove / count_ages[ages_to_remove]
-            remove_probs = np.zeros(len(self))
-            for ind,rf in enumerate(remove_frac):
-                age = ages_to_remove[ind]
-                inds_this_age = hpu.true((self.age>=age) * (self.age<age+1) * self.alive_level0)
-                remove_probs[inds_this_age] = -rf
-            migrate_inds = hpu.choose_w(remove_probs, -n_to_remove.sum())
-            self.remove_people(migrate_inds, cause='emigration')  # Remove people
+            # Do basic calculations
+            for sex in ['Male', 'Female']:
+                sk = sex.lower()[0]
+                data_pop = data_pop_dict[sk]
+                data_pop0 = np.interp(sim_start, data_years, data_pop_dict['t'])
+                scale = sim_pop0 / data_pop0 # Scale factor
+
+                # Calulcate difference between expected and actual number
+                alive_inds = hpu.true(self.alive_level0 & self[f'is_{sex.lower()}'])
+                alive_ages = self.age[alive_inds].astype(int) # Return ages for everyone level 0 and alive
+                count_ages = np.bincount(alive_ages, minlength=age_dist_data.shape[0]) # Bin and count them
+                expected = age_dist_data[f'Pop{sex}'].values*scale # Compute how many of each age we would expect in population
+                difference = (expected-count_ages).astype(int) # Compute difference between expected and simulated for each age
+                n_migrate = np.sum(difference) # Compute total migrations (in and out)
+
+                # Define number to remove and add by age
+                ages_to_remove = hpu.true(difference<0) # Ages where we have too many, need to apply emigration
+                n_to_remove = difference[ages_to_remove] # Determine number of agents to remove for each age
+                ages_to_add = hpu.true(difference>0) # Ages where we have too few, need to apply imigration
+                n_to_add = difference[ages_to_add] # Determine number of agents to add for each age
+
+                # Add people
+                ages_to_add_list = np.repeat(ages_to_add, n_to_add)
+                sex_ratio = 1 if sk=='m' else 0  # Specify whether we're adding males or females
+                self.add_births(new_births=len(ages_to_add_list), ages=np.array(ages_to_add_list), sex_ratio=sex_ratio)
+
+                # Remove people
+                remove_frac = n_to_remove / count_ages[ages_to_remove]
+                remove_probs = np.zeros(len(self))
+                for ind,rf in enumerate(remove_frac):
+                    age = ages_to_remove[ind]
+                    inds_this_age = hpu.true((self.age>=age) * (self.age<age+1) * self.alive_level0 * self[f'is_{sex.lower()}'])
+                    remove_probs[inds_this_age] = -rf
+                migrate_inds = hpu.choose_w(remove_probs, -n_to_remove.sum())
+                self.remove_people(migrate_inds, cause='emigration')  # Remove people
 
         else:
             n_migrate = 0
