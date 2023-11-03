@@ -61,7 +61,7 @@ class outcomes_by_year(hpv.Analyzer):
         super().__init__(**kwargs)
         self.start_year = start_year
         self.interval = 1
-        self.durations = np.arange(0,31, self.interval)
+        self.durations = np.arange(0, 31, self.interval)
         result_keys = ['cleared', 'persisted', 'progressed', 'cancer', 'dead', 'dead_cancer', 'dead_other', 'total']
         self.results = {rkey: np.zeros_like(self.durations) for rkey in result_keys}
 
@@ -114,7 +114,7 @@ class outcomes_by_year(hpv.Analyzer):
                     self.results['persisted'][idd] += scale[persisted_inds].sum()#len(hpv.true(persisted_no_progression))
                     self.results['progressed'][idd] += scale[progressed_inds].sum()#len(hpv.true(persisted_with_progression))
                     self.results['cancer'][idd] += scale[cancer_inds].sum()#len(hpv.true(cancer))
-                    self.results['dead'][idd] += scale[dead_inds].sum()
+                    # self.results['dead'][idd] += scale[dead_inds].sum()
                     self.results['dead_cancer'][idd] += scale[dead_cancer_inds].sum()#len(hpv.true(dead))
                     self.results['dead_other'][idd] += scale[dead_other_inds].sum()  # len(hpv.true(dead))
                     self.results['total'][idd] += scaled_total#derived_total
@@ -195,17 +195,18 @@ def plot_stacked(sim=None):
     years = sim.analyzers[1].durations
 
     df = pd.DataFrame()
-    total_alive = res["total"] - res["dead"]
+    total_alive = res["total"] - res["dead"] - res["dead_cancer"]
     df["years"] = years
     df["prob_clearance"] = (res["cleared"]) / total_alive * 100
     df["prob_persist"] = (res["persisted"]) / total_alive * 100
-    df["prob_progressed"] = (res["progressed"]+ res["cancer"]) / total_alive * 100
+    df["prob_progressed"] = (res["progressed"] + res["cancer"]) / total_alive * 100
 
     df2 = pd.DataFrame()
-    total_persisted_alive = res["total"] - res["dead"] - res["cleared"] -res["persisted"]
+    persisted = res["total"] - res["cleared"] - res["dead_other"] # res["progressed"] + res['cancer'] + res['dead_cancer']
     df2["years"] = years
-    df2["prob_progressed"] = (res["progressed"]) / total_persisted_alive * 100
-    df2["prob_cancer"] = (res["cancer"]) / total_persisted_alive * 100
+    df2["prob_persisted"] = (res["persisted"] + res["progressed"]) / persisted * 100
+    df2["prob_cancer"] = (res["cancer"]) / persisted * 100
+    df2["prob_dead_cancer"] = (res["dead_cancer"]) / persisted * 100
 
     ####################
     # Make figure, set fonts and colors
@@ -215,29 +216,29 @@ def plot_stacked(sim=None):
     fig, axes = pl.subplots(1, 2, figsize=(11, 9))
 
     # Panel 1, all outcomes
-    bottom = np.zeros(len(df["years"][0:10]))
+    bottom = np.zeros(len(df["years"]))
     layers = [
         "prob_clearance",
         "prob_persist",
         "prob_progressed",
     ]
-    labels = ["Cleared", "Persistent Infection", "CIN2+"]
+    labels = ["Cleared", "Persistent Infection", "CIN2+", "Cancer"]
     for ln, layer in enumerate(layers):
         axes[0].fill_between(
-            df["years"][0:10], bottom, bottom + df[layer][0:10], color=colors[ln], label=labels[ln]
+            df["years"], bottom, bottom + df[layer], color=colors[ln], label=labels[ln]
         )
-        bottom += df[layer][0:10]
+        bottom += df[layer]
 
-    # Panel 2, conditional on being alive and not cleared
-    bottom = np.zeros(len(df["years"]))
-    layers = ["prob_progressed", "prob_cancer"]
-    labels = ["CIN2+ regression/persistence", "Cancer"]
+    # Panel 2, conditional on being not cleared
+    bottom = np.zeros(len(df2["years"]))
+    layers = ["prob_persisted", "prob_cancer", "prob_dead_cancer"]
+    labels = ["Persisted", "Cancer", "Cancer death"]
     for ln, layer in enumerate(layers):
         axes[1].fill_between(
             df2["years"],
             bottom,
             bottom + df2[layer],
-            color=colors[ln+2],
+            color=colors[ln+1],
             label=labels[ln],
         )
         bottom += df2[layer]
