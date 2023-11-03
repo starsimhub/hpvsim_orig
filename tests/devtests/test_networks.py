@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 
 do_plot = 1
-do_save = 0
+do_save = 1
 
 
 # %% Define the tests
@@ -74,9 +74,9 @@ def test_network(do_plot=True):
 
         fig, axes = pl.subplots(nrows=1, ncols=2, figsize=(8, 2))
         ax = axes.flatten()
-        types = ['casual', 'one-off']
+        types = ['marital', 'casual']
         xx = people.lag_bins[1:15] * sim['dt']
-        for cn, lkey in enumerate(['c', 'o']):
+        for cn, lkey in enumerate(['m', 'c']):
             yy = people.rship_lags[lkey][:14] / sum(people.rship_lags[lkey])
             ax[cn].bar(xx, yy, width=0.2)
             ax[cn].set_xlabel(f'Time between {types[cn]} relationships')
@@ -92,7 +92,7 @@ class rship_count(hpv.Analyzer):
         super().__init__(*args, **kwargs)
         self.n_edges = dict()
         self.n_edges_norm = dict()
-        for rtype in ['m','c','o']:
+        for rtype in ['m','c']:
             self.n_edges[rtype] = []
             self.n_edges_norm[rtype] = []
 
@@ -101,7 +101,7 @@ class rship_count(hpv.Analyzer):
         self.yearvec = sim.yearvec
 
     def apply(self, sim):
-        for rtype in ['m','c','o']:
+        for rtype in ['m','c']:
             self.n_edges[rtype].append(len(sim.people.contacts[rtype]))
             age = sim.people.age[sim.people.is_active]
             denom = ((age>14) * age<65).sum()
@@ -111,7 +111,7 @@ class rship_count(hpv.Analyzer):
     def plot(self, do_save=False, filename=None, from_when=1990):
         fig, ax = plt.subplots(2, 3, figsize=(15, 8))
         yi = sc.findinds(self.yearvec, from_when)[0]
-        for rn,rtype in enumerate(['m','c','o']):
+        for rn,rtype in enumerate(['m','c']):
             ax[0,rn].plot(self.yearvec[yi:], self.n_edges[rtype][yi:])
             ax[0,rn].set_title(f'Edges - {rtype}')
             ax[1,rn].plot(self.yearvec[yi:], self.n_edges_norm[rtype][yi:])
@@ -131,7 +131,7 @@ def test_network_time(do_plot=do_plot):
                 end=2050,
                 dt=1.0,
                 location='india',
-                genotypes=[16,18,'hrhpv'],
+                genotypes=[16,18,'hi5'],
                 )
 
     sim = hpv.Sim(pars=pars, analyzers=rship_count())

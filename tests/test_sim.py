@@ -44,7 +44,7 @@ def test_sim(do_plot=False, do_save=False, do_run=True, **kwargs): # If being ru
     # Create and run the simulation
     pars = {
         'n_agents': 5e3,
-        'total_pop': 200_000,
+        # 'total_pop': 200_000,
         'start': 1970,
         'burnin': 30,
         'end': 2030,
@@ -326,11 +326,6 @@ def test_result_consistency():
     # assert (sim.results['n_infectious'][:].sum(axis=0)==sim.results['n_total_infectious'][:]).all() # Check stocks by genotype are equal to stocks flows
     # assert np.allclose(sim.results.age['n_infectious_by_age'][:].sum(axis=0),sim.results['n_infectious'][:]) # Check stocks by age are equal to stocks flows
 
-
-    # # Check that CINs by grade sum up the the correct totals
-    # assert np.allclose((sim.results['cin1s'][:] + sim.results['cin2s'][:] + sim.results['cin3s'][:]),sim.results['dysplasias'][:])
-    # assert np.allclose((sim.results['cin1s_by_genotype'][:] + sim.results['cin2s_by_genotype'][:] + sim.results['cin3s_by_genotype'][:]), sim.results['dysplasias_by_genotype'][:])
-
     # Check that results by age sum to the correct totals
     assert np.allclose(sim.results['cancers_by_age'][:].sum(axis=0),sim.results['cancers'][:])
     assert np.allclose(sim.results['infections_by_age'][:].sum(axis=0),sim.results['infections'][:])
@@ -407,14 +402,14 @@ if __name__ == '__main__':
     # Start timing and optionally enable interactive plotting
     T = sc.tic()
 
-    sim0 = test_microsim()
-    sim1 = test_sim(do_plot=do_plot, do_save=do_save)
-    s0, s1 = test_epi()
-    sim3 = test_states()
-    sim4 = test_flexible_inputs()
-    sim5 = test_result_consistency()
-    sim6 = test_location_loading()
-    sim7 = test_resuming()
+    # sim0 = test_microsim()
+    sim = test_sim(do_plot=do_plot, do_save=do_save)
+    # s0, s1 = test_epi()
+    # sim3 = test_states()
+    # sim4 = test_flexible_inputs()
+    # sim5 = test_result_consistency()
+    # sim6 = test_location_loading()
+    # sim7 = test_resuming()
 
     sc.toc(T)
     print('Done.')
