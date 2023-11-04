@@ -204,7 +204,8 @@ def plot_stacked(sim=None):
     df2 = pd.DataFrame()
     persisted = res["total"] - res["cleared"] - res["dead_other"] # res["progressed"] + res['cancer'] + res['dead_cancer']
     df2["years"] = years
-    df2["prob_persisted"] = (res["persisted"] + res["progressed"]) / persisted * 100
+    df2["prob_persisted"] = (res["persisted"]) / persisted * 100
+    df2["prob_progressed"] = (res["progressed"]) / persisted * 100
     df2["prob_cancer"] = (res["cancer"]) / persisted * 100
     df2["prob_dead_cancer"] = (res["dead_cancer"]) / persisted * 100
 
@@ -231,8 +232,8 @@ def plot_stacked(sim=None):
 
     # Panel 2, conditional on being not cleared
     bottom = np.zeros(len(df2["years"]))
-    layers = ["prob_persisted", "prob_cancer", "prob_dead_cancer"]
-    labels = ["Persisted", "Cancer", "Cancer death"]
+    layers = ["prob_persisted", "prob_progressed", "prob_cancer", "prob_dead_cancer"]
+    labels = ["LSIL", "HSIL", "Cancer", "Cancer death"]
     for ln, layer in enumerate(layers):
         axes[1].fill_between(
             df2["years"],
