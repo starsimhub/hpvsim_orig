@@ -340,7 +340,7 @@ def get_genotype_pars(default=False, genotype=None):
     pars.hpv16 = sc.objdict()
     pars.hpv16.dur_precin       = dict(dist='lognormal', par1=par1_16, par2=par2_16)  # Duration of infection prior to precancer
     pars.hpv16.cin_fn           = dict(form='logf2', k=2.5, x_infl=0, ttc=50)  # Function mapping duration of infection to probability of developing cin
-    pars.hpv16.dur_cin          = dict(dist='lognormal', par1=5.5, par2=20) # Duration of episomal infection prior to cancer
+    pars.hpv16.dur_cin          = dict(dist='lognormal', par1=5, par2=20) # Duration of episomal infection prior to cancer
     # pars.hpv16.cancer_fn        = dict(method='cin_integral', ld50=15, **pars.hpv16.cin_fn) # Function mapping duration of cin to probability of cancer
     pars.hpv16.cancer_fn        = dict(method='cin_integral', transform_prob=2e-3, **pars.hpv16.cin_fn) # Function mapping duration of cin to probability of cancer
     pars.hpv16.rel_beta         = 1.0  # Baseline relative transmissibility, other genotypes are relative to this
