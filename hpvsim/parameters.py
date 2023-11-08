@@ -358,7 +358,7 @@ def get_genotype_pars(default=False, genotype=None):
     # High-risk oncogenic types included in 9valent vaccine: 31, 33, 45, 52, 58
     pars.hi5 = sc.objdict()
     pars.hi5.dur_precin         = dict(dist='lognormal', par1=par1, par2=par2)  # Duration of infection prior to precancer
-    pars.hi5.dur_cin            = dict(dist='lognormal', par1=4, par2=20) # Duration of infection prior to cancer
+    pars.hi5.dur_cin            = dict(dist='lognormal', par1=4.5, par2=20) # Duration of infection prior to cancer
     pars.hi5.cin_fn             = dict(form='logf2', k=0.15, x_infl=0, ttc=50, y_max=1)  # Function mapping duration of infection to probability of developing cin
     pars.hi5.cancer_fn          = dict(method='cin_integral', transform_prob=1e-3, **pars.hi5.cin_fn)  # Function mapping duration of infection to severity
     # pars.hi5.cancer_fn          = dict(method='cin_integral', ld50=20, **pars.hi5.cin_fn)  # Function mapping duration of infection to severity
@@ -368,7 +368,7 @@ def get_genotype_pars(default=False, genotype=None):
     # Other high-risk: oncogenic but not covered in 9valent vaccine: 35, 39, 51, 56, 59
     pars.ohr = sc.objdict()
     pars.ohr.dur_precin         = dict(dist='lognormal', par1=par1, par2=par2)  # Duration of infection prior to precancer
-    pars.ohr.dur_cin            = dict(dist='lognormal', par1=4, par2=20) # Duration of infection prior to cancer
+    pars.ohr.dur_cin            = dict(dist='lognormal', par1=4.5, par2=20) # Duration of infection prior to cancer
     pars.ohr.cin_fn             = dict(form='logf2', k=0.15, x_infl=0, ttc=50, y_max=1)  # Function mapping duration of infection to probability of developing cin
     pars.ohr.cancer_fn          = dict(method='cin_integral', transform_prob=1e-3, **pars.ohr.cin_fn)  # Function mapping duration of infection to severity
     # pars.ohr.cancer_fn          = dict(method='cin_integral', ld50=20, **pars.ohr.cin_fn)  # Function mapping duration of infection to severity
