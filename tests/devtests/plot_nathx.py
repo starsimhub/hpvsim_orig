@@ -61,7 +61,7 @@ class outcomes_by_year(hpv.Analyzer):
         super().__init__(**kwargs)
         self.start_year = start_year
         self.interval = 1
-        self.durations = np.arange(0, 31, self.interval)
+        self.durations = np.arange(0, 41, self.interval)
         result_keys = ['cleared', 'persisted', 'progressed', 'cancer', 'dead', 'dead_cancer', 'dead_other', 'total']
         self.results = {rkey: np.zeros_like(self.durations) for rkey in result_keys}
 
