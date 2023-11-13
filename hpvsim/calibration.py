@@ -172,6 +172,13 @@ class Calibration(sc.prettyobj):
         sim.update_pars(new_pars)
         sim.initialize(reset=True, init_analyzers=False) # Necessary to reinitialize the sim here so that the initial infections get the right parameters
 
+        import traceback
+        
+        traceback.print_exc()
+        import pdb
+        
+        pdb.set_trace()
+
         # Run the sim
         try:
             sim.run()
