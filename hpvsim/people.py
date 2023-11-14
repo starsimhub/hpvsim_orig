@@ -215,12 +215,6 @@ class People(hpb.BasePeople):
         self.dur_infection[g, inds] = dur_precin
 
         # Probability of progressing
-        if self.t == 40:
-            import traceback
-            traceback.print_exc()
-            import pdb
-            pdb.set_trace()
-
         cin_probs = hppar.compute_severity(dur_precin, rel_sev=self.rel_sev[inds], pars=gpars['cin_fn'])
         cin_bools = hpu.binomial_arr(cin_probs)
         cin_inds = inds[cin_bools]
