@@ -44,6 +44,9 @@ def make_pars(**kwargs):
     pars['rel_birth']       = 1.0       # Birth rate scale factor
     pars['rel_death']       = 1.0       # Death rate scale factor
     pars['sex_ratio']       = 0.5       # Sex ratio at birth - share of males
+    pars['age_datafile']    = None
+    pars['pop_datafile']    = None
+    pars['popage_datafile'] = None
 
     # Initialization parameters
     pars['init_hpv_prev'] = sc.dcp(hpd.default_init_prev) # Initial prevalence
@@ -70,8 +73,8 @@ def make_pars(**kwargs):
     pars['add_mixing']      = None  # Mixing matrix between clusters
     pars['debut']           = dict(f=dict(dist='normal', par1=15.0, par2=2.1), # Location-specific data should be used here if possible
                                    m=dict(dist='normal', par1=17.6, par2=1.8))
-    pars['f_cross_layer']   = 0.02  # Proportion of females who have concurrent cross-layer relationships - by layer
-    pars['m_cross_layer']   = 0.10  # Proportion of males who have concurrent cross-layer relationships - by layer
+    pars['f_cross_layer']   = 0.05  # Proportion of females who have concurrent cross-layer relationships - by layer
+    pars['m_cross_layer']   = 0.30  # Proportion of males who have concurrent cross-layer relationships - by layer
     pars['f_partners']      = None  # Distribution of preferred number of concurrent sexual partners, females
     pars['m_partners']      = None  # Distribution of preferred number of concurrent sexual partners, males
     pars['acts']            = None  # The number of sexual acts for each partnership type per year
@@ -82,7 +85,7 @@ def make_pars(**kwargs):
     pars['n_partner_types'] = 1  # Number of partnership types - reset below
 
     # Basic disease transmission parameters
-    pars['beta']                = 0.35  # Per-act transmission probability; absolute value, calibrated
+    pars['beta']                = 0.25  # Per-act transmission probability; absolute value, calibrated
     pars['transf2m']            = 1.0   # Relative transmissibility of receptive partners in penile-vaginal intercourse; baseline value
     pars['transm2f']            = 3.69  # Relative transmissibility of insertive partners in penile-vaginal intercourse; based on https://doi.org/10.1038/srep10986: "For vaccination types, the risk of male-to-female transmission was higher than that of female-to-male transmission"
     pars['eff_condoms']         = 0.5   # The efficacy of condoms; https://www.nejm.org/doi/10.1056/NEJMoa053284?url_ver=Z39.88-2003&rfr_id=ori:rid:crossref.org&rfr_dat=cr_pub%20%200www.ncbi.nlm.nih.gov
@@ -176,10 +179,10 @@ def reset_layer_pars(pars, layer_keys=None, force=False):
     layer_defaults['default'] = dict(
         m_partners = dict(
             m=dict(dist='poisson1', par1=0.01), # Everyone in this layer has one marital partner; this captures *additional* marital partners. If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 spouse
-            c=dict(dist='poisson1', par1=0.2)
-        ),  # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 casual partner at a time
+            c=dict(dist='poisson1', par1=0.5)
+        ),  # If using a poisson distribution, par1 is roughly equal to the proportion of people with >1 casual partner within a single time step
         f_partners = dict(
-            m=dict(dist="poisson1", par1=0.001),
+            m=dict(dist="poisson1", par1=0.01),
             c=dict(dist='poisson', par1=1), # Defaults: {'0': 0.36, '1': 0.37, '2': 0.19, '3': 0.06, '4+':0.02}
         ),
         acts         = dict(m=dict(dist='neg_binomial', par1=80, par2=40), # Default number of acts per year for people at sexual peak
@@ -328,46 +331,37 @@ def get_genotype_pars(default=False, genotype=None):
 
     pars = sc.objdict()
 
-    # Find parameters from Guanacaste cohort data
-    # Unpublished figure by Schiffman shows 50% hr hpv clear after 6 months, 70% hr hpv clear after 1 year, 86% after 3 years
-    par1 = 2.5
-    par2 = 10
-
-    # Unpublished figure by Schiffman shows 50% hpv16 clear after 1 year, 60% after 3 years
-    par1_16 = 4.5
-    par2_16 = 10
-
     pars.hpv16 = sc.objdict()
-    pars.hpv16.dur_precin       = dict(dist='lognormal', par1=par1_16, par2=par2_16)  # Duration of infection prior to precancer
+    pars.hpv16.dur_precin       = dict(dist='lognormal', par1=3, par2=9)  # Duration of infection prior to precancer, chosen so that ~50% clear after 1 year (Schiffman et al)
     pars.hpv16.cin_fn           = dict(form='logf2', k=0.3, x_infl=0, ttc=50)  # Function mapping duration of infection to probability of developing cin
-    pars.hpv16.dur_cin          = dict(dist='lognormal', par1=6, par2=20) # Duration of episomal infection prior to cancer
-    pars.hpv16.cancer_fn        = dict(method='cin_integral', ld50=15, **pars.hpv16.cin_fn) # Function mapping duration of cin to probability of cancer
+    pars.hpv16.dur_cin          = dict(dist='lognormal', par1=5, par2=20) # Duration of episomal infection prior to cancer
+    pars.hpv16.cancer_fn        = dict(method='cin_integral', transform_prob=2e-3) # Function mapping duration of cin to probability of cancer
     pars.hpv16.rel_beta         = 1.0  # Baseline relative transmissibility, other genotypes are relative to this
     pars.hpv16.sero_prob        = 0.75 # https://www.sciencedirect.com/science/article/pii/S2666679022000027#fig1
 
     pars.hpv18 = sc.objdict()
-    pars.hpv18.dur_precin       = dict(dist='lognormal', par1=par1, par2=par2)  # Duration of infection prior to precancer
+    pars.hpv18.dur_precin       = dict(dist='lognormal', par1=2.5, par2=9)  # Duration of infection prior to precancer, chosen so that ~50% clear after 6m (Schiffman et al)
     pars.hpv18.dur_cin          = dict(dist='lognormal', par1=5, par2=20) # Duration of infection prior to cancer
-    pars.hpv18.cin_fn           = dict(form='logf2', k=0.25, x_infl=0, ttc=50, y_max=1)  # Function mapping duration of infection to probability of developing cin
-    pars.hpv18.cancer_fn        = dict(method='cin_integral', ld50=15, **pars.hpv18.cin_fn)  # Function mapping duration of infection to severity
+    pars.hpv18.cin_fn           = dict(form='logf2', k=0.25, x_infl=0, ttc=50)  # Function mapping duration of infection to probability of developing cin
+    pars.hpv18.cancer_fn        = dict(method='cin_integral', transform_prob=2e-3)  # Function mapping duration of infection to severity
     pars.hpv18.rel_beta         = 0.75  # Relative transmissibility, current estimate from Harvard model calibration of m2f tx
     pars.hpv18.sero_prob        = 0.56 # https://www.sciencedirect.com/science/article/pii/S2666679022000027#fig1
 
     # High-risk oncogenic types included in 9valent vaccine: 31, 33, 45, 52, 58
     pars.hi5 = sc.objdict()
-    pars.hi5.dur_precin         = dict(dist='lognormal', par1=par1, par2=par2)  # Duration of infection prior to precancer
-    pars.hi5.dur_cin            = dict(dist='lognormal', par1=4, par2=20) # Duration of infection prior to cancer
-    pars.hi5.cin_fn             = dict(form='logf2', k=0.2, x_infl=0, ttc=50, y_max=1)  # Function mapping duration of infection to probability of developing cin
-    pars.hi5.cancer_fn          = dict(method='cin_integral', ld50=20, **pars.hi5.cin_fn)  # Function mapping duration of infection to severity
+    pars.hi5.dur_precin         = dict(dist='lognormal', par1=2.5, par2=9)  # Duration of infection prior to precancer
+    pars.hi5.dur_cin            = dict(dist='lognormal', par1=4.5, par2=20) # Duration of infection prior to cancer
+    pars.hi5.cin_fn             = dict(form='logf2', k=0.2, x_infl=0, ttc=50)  # Function mapping duration of infection to probability of developing cin
+    pars.hi5.cancer_fn          = dict(method='cin_integral', transform_prob=1.5e-3)  # Function mapping duration of infection to severity
     pars.hi5.rel_beta           = 0.9 # placeholder
     pars.hi5.sero_prob          = 0.60 # placeholder
 
     # Other high-risk: oncogenic but not covered in 9valent vaccine: 35, 39, 51, 56, 59
     pars.ohr = sc.objdict()
-    pars.ohr.dur_precin         = dict(dist='lognormal', par1=par1, par2=par2)  # Duration of infection prior to precancer
-    pars.ohr.dur_cin            = dict(dist='lognormal', par1=4, par2=4) # Duration of infection prior to cancer
-    pars.ohr.cin_fn             = dict(form='logf2', k=0.2, x_infl=0, ttc=50, y_max=1)  # Function mapping duration of infection to probability of developing cin
-    pars.ohr.cancer_fn          = dict(method='cin_integral', ld50=20, **pars.ohr.cin_fn)  # Function mapping duration of infection to severity
+    pars.ohr.dur_precin         = dict(dist='lognormal', par1=2.5, par2=9)  # Duration of infection prior to precancer
+    pars.ohr.dur_cin            = dict(dist='lognormal', par1=4.5, par2=20) # Duration of infection prior to cancer
+    pars.ohr.cin_fn             = dict(form='logf2', k=0.2, x_infl=0, ttc=50)  # Function mapping duration of infection to probability of developing cin
+    pars.ohr.cancer_fn          = dict(method='cin_integral', transform_prob=1.5e-3)  # Function mapping duration of infection to severity
     pars.ohr.rel_beta           = 0.9 # placeholder
     pars.ohr.sero_prob          = 0.60 # placeholder
 
@@ -377,7 +371,7 @@ def get_genotype_pars(default=False, genotype=None):
     pars.hr.dur_precin       = dict(dist='lognormal', par1=2, par2=10)  # Duration of infection prior to precancer
     pars.hr.dur_cin          = dict(dist='lognormal', par1=4, par2=4) # Duration of infection prior to cancer
     pars.hr.cin_fn           = dict(form='logf2', k=0.15, x_infl=10, ttc=50)  # Function mapping duration of infection to probability of developing cin
-    pars.hr.cancer_fn        = dict(method='cin_integral', ld50=20, **pars.hr.cin_fn)  # Function mapping duration of infection to severity
+    pars.hr.cancer_fn        = dict(method='cin_integral', ld50=20)  # Function mapping duration of infection to severity
     pars.hr.rel_beta         = 0.9 # placeholder
     pars.hr.sero_prob        = 0.60 # placeholder
 
@@ -386,7 +380,7 @@ def get_genotype_pars(default=False, genotype=None):
     pars.lr.dur_precin          = dict(dist='lognormal', par1=2, par2=10)  # Duration of infection prior to precancer
     pars.lr.dur_cin             = dict(dist='lognormal', par1=0.1, par2=0.1) # Duration of infection prior to cancer
     pars.lr.cin_fn              = dict(form='logf2', k=0.01, x_infl=0, ttc=100)  # Function mapping duration of infection to probability of developing cin
-    pars.lr.cancer_fn           = dict(method='cin_integral', ld50=60, **pars.lr.cin_fn)  # Function mapping duration of infection to severity
+    pars.lr.cancer_fn           = dict(method='cin_integral', ld50=60)  # Function mapping duration of infection to severity
     pars.lr.rel_beta            = 0.9 # placeholder
     pars.lr.sero_prob           = 0.60 # placeholder
 
@@ -520,13 +514,15 @@ def get_mixing(network=None):
         layer_probs = dict(
             m=np.array([
                 [ 0,  5,    10,    15,   20,   25,   30,   35,    40,    45,    50,   55,   60,   65,   70,   75],
-                [ 0,  0,  0.01,   0.5,  0.05,  0.1,  0.2,  0.2,   0.2,   0.2,   0.1,  0.1,  0.1, 0.05, 0.05, 0.01], # Share of females of each age who are actively seeking marriage if underpartnered
-                [ 1,  1,     1,     1,    1,    1,    1,    1,     1,     1,     1,    1,    1,    1,    1,    1]] # Share of males of each age who are actively seeking marriage if underpartnered
+                [ 0,  0,  0.01,   0.5,  0.5,  0.5,  0.5,  0.5,   0.5,   0.5,   0.5,  0.3,  0.2,  0.1, 0.05, 0.01], # Share of females of each age who are actively seeking marriage if underpartnered
+                [ 0,  0,  0.01,   0.2,  0.3,  0.5,  0.5,  0.5,   0.5,   0.5,   0.5,  0.3,  0.2,  0.1, 0.05, 0.01]] # Share of males of each age who are actively seeking marriage if underpartnered
+                # [ 1,  1,     1,     1,    1,    1,    1,    1,     1,     1,     1,    1,    1,    1,    1,    1]] # Share of males of each age who are actively seeking marriage if underpartnered
             ),
             c=np.array([
                 [ 0,  5,    10,    15,   20,   25,   30,   35,    40,    45,    50,   55,   60,   65,   70,   75],
-                [ 0,  0,   0.1,   0.2,  0.3,  0.4,  0.3,  0.3,   0.1,  0.05,  0.001, 0.001, 0.001, 0.001, 0.001, 0.001], # Share of females of each age actively seeking casual relationships if underpartnered
-                [ 1,  1,     1,     1,    1,    1,    1,    1,     1,     1,     1,    1,    1,    1,    1,    1]] # Share of males of each age actively seeking casual relationships if underpartnered
+                [ 0,  0,   0.2,   0.6,  0.8,  0.6,  0.4,  0.4,   0.4,   0.1,  0.02, 0.02, 0.02, 0.02, 0.02, 0.02], # Share of females of each age actively seeking casual relationships if underpartnered
+                [ 0,  0,   0.2,   0.4,  0.4,  0.4,  0.4,  0.6,   0.8,   0.6,   0.2,  0.1, 0.05, 0.02, 0.02, 0.02]] # Share of males of each age actively seeking casual relationships if underpartnered
+                # [ 1,  1,     1,     1,    1,    1,    1,    1,     1,     1,     1,    1,    1,    1,    1,    1]] # Share of males of each age actively seeking casual relationships if underpartnered
             )
         )
 

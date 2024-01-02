@@ -44,8 +44,8 @@ def test_sim(do_plot=False, do_save=False, do_run=True, **kwargs): # If being ru
     # Create and run the simulation
     pars = {
         'n_agents': 5e3,
-        'total_pop': 200_000,
         'start': 1970,
+        'genotypes': [16, 18, 'hi5', 'ohr'],
         'burnin': 30,
         'end': 2030,
         'ms_agent_ratio': 100
@@ -55,7 +55,7 @@ def test_sim(do_plot=False, do_save=False, do_run=True, **kwargs): # If being ru
     # Create some genotype pars
     genotype_pars = {
         16: {
-            'cin_fn': dict(form='logf2', k=0.25, x_infl=0, ttc=30)
+            'cin_fn': dict(form='logf2', k=0.25, x_infl=0, ttc=49)
         }
     }
 

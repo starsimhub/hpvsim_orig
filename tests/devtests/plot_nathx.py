@@ -202,10 +202,10 @@ def plot_stacked(sim=None):
     df["prob_progressed"] = (res["progressed"]+ res["cancer"]) / total_alive * 100
 
     df2 = pd.DataFrame()
-    total_persisted_alive = res["total"] - res["dead"] - res["cleared"] -res["persisted"]
+    total_persisted = res["total"] - res["dead_other"] - res["cleared"]
     df2["years"] = years
-    df2["prob_progressed"] = (res["progressed"]) / total_persisted_alive * 100
-    df2["prob_cancer"] = (res["cancer"]) / total_persisted_alive * 100
+    df2["prob_persisted"] = (res["persisted"] + res["progressed"]) / total_persisted * 100
+    df2["prob_cancer"] = (res["cancer"]+ res["dead_cancer"]) / total_persisted * 100
 
     ####################
     # Make figure, set fonts and colors
@@ -230,7 +230,7 @@ def plot_stacked(sim=None):
 
     # Panel 2, conditional on being alive and not cleared
     bottom = np.zeros(len(df["years"]))
-    layers = ["prob_progressed", "prob_cancer"]
+    layers = ["prob_persisted", "prob_cancer"]
     labels = ["CIN2+ regression/persistence", "Cancer"]
     for ln, layer in enumerate(layers):
         axes[1].fill_between(
@@ -309,7 +309,7 @@ def plot_nh(sim=None):
 
         # Panel D: dysplasia
 
-        cancer = hppar.compute_severity(this_cinx[:], pars=cancer_fns[gi])
+        cancer = hppar.compute_severity(this_cinx[:], pars=sc.mergedicts(cin_fns[gi], cancer_fns[gi]))
         axes[3].plot(this_cinx, cancer, color=colors[gi], lw=2, label=gtype.upper())
 
 
@@ -439,7 +439,7 @@ def plot_nh_simple(sim=None):
         axes[2].plot(this_cinx, rv.pdf(this_cinx), color=colors[gi], lw=2, label=glabels[gi])
 
         # Panel D: cancer
-        cancer = hppar.compute_severity(this_cinx[:], pars=cancer_fns[gi])
+        cancer = hppar.compute_severity(this_cinx[:], pars=sc.mergedicts(cin_fns[gi], cancer_fns[gi]))
         axes[3].plot(this_cinx, cancer, color=colors[gi], lw=2, label=gtype.upper())
 
 
@@ -451,21 +451,22 @@ def plot_nh_simple(sim=None):
 
     axes[1].set_ylabel("Probability of CIN")
     axes[1].set_xlabel("Duration of infection (years)")
-    axes[1].set_title("Infection duration to progression\nfunction")
+    axes[1].set_title("Probability that an infection of at least\nX years will lead to high-grade lesions")
     axes[1].set_ylim([0,1])
     axes[1].grid()
 
     axes[2].set_ylabel("")
     axes[2].grid()
-    axes[2].set_xlabel("Duration of CIN (years)")
-    axes[2].set_title("Distribution of\n CIN duration")
+    axes[2].set_xlabel("Duration of high-grade lesions (years)")
+    axes[2].set_title("Distribution of high-grade lesion duration")
     axes[2].legend(frameon=False)
 
     axes[3].set_ylim([0,1])
     axes[3].grid()
     # axes[2].set_ylabel("Probability of transformation")
     axes[3].set_xlabel("Duration of CIN (years)")
-    axes[3].set_title("Probability of cancer\n within X years")
+    axes[3].set_title("Probability that a high-grade lesion of at least\nX years will eventuate in cancer")
+    # axes[3].set_title("Probability of cancer\n within X years")
 
     fig.tight_layout()
     fig.savefig(f'nathx_simple.png')
@@ -476,7 +477,7 @@ def plot_nh_simple(sim=None):
 if __name__ == '__main__':
 
     make_simple = True
-    make_stacked = True
+    make_stacked = False
     do_run = True
 
     if make_simple:
@@ -494,7 +495,7 @@ if __name__ == '__main__':
                 'end': 2020,
                 'ms_agent_ratio': 100,
                 'n_agents': 50e3,
-                'sev_dist': dict(dist='normal_pos', par1=1., par2=0.001)
+                # 'sev_dist': dict(dist='normal_pos', par1=1., par2=0.1)
             }
             age_causal_by_genotype = dwelltime_by_genotype(start_year=2000)
             outcomes_by_year = outcomes_by_year(start_year=2000)
