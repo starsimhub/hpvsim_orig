@@ -643,9 +643,11 @@ def compute_severity(t, rel_sev=None, pars=None):
         del pars['method']
         if pars.get('ld50'):
             ld50 = pars.pop('ld50')
+            pars.pop('transform_prob', None)  # Removes if exists, otherwise does nothing
             sev_at_ld50 = compute_severity_integral(np.array([ld50]), rel_sev=None, pars=pars)[0]
             transform_prob = 1 - 0.5**(1/sev_at_ld50**2)
         elif pars.get('transform_prob'):
+            pars.pop('ld50', None)  # Removes if exists, otherwise does nothing
             transform_prob = pars.pop('transform_prob')
         else:
             errormsg('If using calculating cancer probabilities using the integral of the CIN function, '
