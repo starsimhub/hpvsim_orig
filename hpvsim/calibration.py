@@ -204,8 +204,7 @@ class Calibration(sc.prettyobj):
     
     def update_dict_pars_from_trial(self, name_pars, value_pars):
         ''' Function to update parameters from nested dict to trial parameter's value '''
-        # new_pars = sc.dcp(name_pars)
-        new_pars = {}
+        new_pars = sc.dcp(name_pars)
         name_pars_keys = sc.flattendict(name_pars).keys()
         for key in name_pars_keys:
             name = '_'.join(key)
