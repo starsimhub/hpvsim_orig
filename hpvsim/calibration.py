@@ -188,7 +188,7 @@ class Calibration(sc.prettyobj):
                 hpm.warn(warnmsg)
                 output = None if return_sim else np.inf
                 return output
-            
+
     @staticmethod
     def update_dict_pars(name_pars, value_pars):
         ''' Function to update parameters from nested dict to nested dict's value '''
@@ -197,6 +197,15 @@ class Calibration(sc.prettyobj):
         for key, val in target_pars_flatten.items():
             try: 
                 sc.setnested(new_pars, list(key), val)
+                #ld50 and transform_prob can't exist together
+                if 'ld50' in key or 'transform_prob' in key:
+                    keep_key, remove_key = ('ld50', 'transform_prob') if 'ld50' in key else ('transform_prob', 'ld50')
+                    keep_index = key.index(keep_key)
+                    nested_dict = new_pars[key[0]]
+                    for _ in range(keep_index - 1):
+                        nested_dict = nested_dict[key[_ + 1]]
+                    nested_dict.pop(remove_key, None)
+
             except Exception as e:
                 errormsg = f"Parameter {'_'.join(key)} is not part of the sim, nor is a custom function specified to use them"
                 raise ValueError(errormsg)
