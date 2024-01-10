@@ -275,12 +275,6 @@ class Calibration(sc.prettyobj):
             sim.update_pars(new_pars)
             sim.run()
         '''
-
-        # Initialize
-        calib_pars = sc.objdict()
-        genotype_pars = sc.objdict()
-        hiv_pars = sc.objdict()
-
         # Deal with trial parameters
         if trial_pars is None:
             try:
@@ -292,6 +286,11 @@ class Calibration(sc.prettyobj):
             except:
                 errormsg = 'No trial parameters provided.'
                 raise ValueError(errormsg)
+
+        # Initialize
+        calib_pars = {}
+        genotype_pars = {}
+        hiv_pars = {}
 
         # Handle genotype parameters
         if self.genotype_pars is not None:
