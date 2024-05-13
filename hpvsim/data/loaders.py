@@ -209,7 +209,7 @@ def get_age_distribution_over_time(location=None, popage_datafile=None):
     # Load the raw data
     if popage_datafile is None:
         try:
-            df = load_file(files.age_dist_sex)
+            df = load_file(files.age_dist)
         except Exception as E:
             errormsg = 'Could not locate datafile with population sizes by country. Please run data/get_data.py first.'
             raise ValueError(errormsg) from E
@@ -217,9 +217,8 @@ def get_age_distribution_over_time(location=None, popage_datafile=None):
     else:
         full_df = pd.read_csv(popage_datafile)
 
-    result = full_df.rename(columns={'Time':'year', 'AgeGrpStart': 'age', 'PopMale': 'male', 'PopFemale': 'female'})
-    result['male'] *= 1e3 # reported as per 1,000
-    result['female'] *= 1e3  # reported as per 1,000
+    result = full_df.rename(columns={'Time':'year', 'AgeGrpStart': 'age'})
+    result['PopTotal'] *= 1e3 # reported as per 1,000
 
     return result
 
