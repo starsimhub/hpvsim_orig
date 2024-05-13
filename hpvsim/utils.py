@@ -376,7 +376,7 @@ def set_seed(seed=None):
 #%% Probabilities -- mostly not jitted since performance gain is minimal
 
 __all__ += ['n_binomial', 'binomial_filter', 'binomial_arr', 'n_multinomial',
-            'poisson', 'n_poisson', 'n_neg_binomial', 'choose', 'choose_r', 'choose_w', 'participation_filter']
+            'poisson', 'n_poisson', 'n_neg_binomial', 'choose', 'choose_r', 'choose_w']
 
 def n_binomial(prob, n):
     '''
@@ -553,31 +553,13 @@ def choose_w(probs, n, unique=True): # No performance gain from Numba
         probs = np.ones(n_choices)/n_choices
     return np.random.choice(n_choices, n_samples, p=probs, replace=not(unique))
 
-def participation_filter(inds, age, layer_probs, bins):
-    '''
-    Apply age-specific participation filter to eligible individuals.
-
-    Args:
-        inds (array): indicies of individuals to be filtered
-        age (array): age of all individuals
-        layer_probs (array): participation rates
-        bins (array): age bins
-
-    '''
-    age_bins = np.digitize(age[inds], bins=bins) - 1  # Age bins of individuals
-    bin_range = np.unique(age_bins)  # Range of bins
-    participating_inds = np.array([], dtype=int)  # Initialize
-    for ab in bin_range:  # Loop over age bins
-        these_contacts = binomial_filter(layer_probs[ab], inds[age_bins == ab])  # Select individuals according to their participation rate in this layer
-        participating_inds = np.append(participating_inds, these_contacts)
-    return participating_inds
 
 #%% Simple array operations
 
 __all__ += ['true',   'false',   'defined',   'undefined',
             'itrue',  'ifalse',  'idefined',  'iundefined',
-            'itruei', 'ifalsei', 'idefinedi', 'iundefinedi',
-            'dtround', 'find_cutoff']
+            'itruei', 'ifalsei', 'idefinedi', 'iundefinedi'
+            ]
 
 
 def true(arr):
@@ -758,6 +740,10 @@ def iundefinedi(arr, inds):
     return inds[np.isnan(arr[inds])]
 
 
+#%% Other numerical utilities
+
+__all__ += ['dtround', 'find_cutoff', 'safedivide', 'participation_filter']
+
 def dtround(arr, dt, ceil=True):
     '''
     Rounds the values in the array to the nearest timestep
@@ -782,3 +768,35 @@ def find_cutoff(duration_cutoffs, duration):
     Find which duration bin each ind belongs to.
     '''
     return np.nonzero(duration_cutoffs <= duration)[0][-1]  # Index of the duration bin to use
+
+
+def safedivide(num, denom):
+    ''' Define a variation on sc.safedivide that respects shape of numerator '''
+    answer = np.zeros_like(num)
+    fill_inds = (denom != 0).nonzero()
+    if len(num.shape) == len(denom.shape):
+        answer[fill_inds] = num[fill_inds] / denom[fill_inds]
+    else:
+        answer[:, fill_inds] = num[:, fill_inds] / denom[fill_inds]
+    return answer
+
+
+def participation_filter(inds, age, layer_probs, bins):
+    '''
+    Apply age-specific participation filter to eligible individuals.
+
+    Args:
+        inds (array): indicies of individuals to be filtered
+        age (array): age of all individuals
+        layer_probs (array): participation rates
+        bins (array): age bins
+
+    '''
+    age_bins = np.digitize(age[inds], bins=bins) - 1  # Age bins of individuals
+    bin_range = np.unique(age_bins)  # Range of bins
+    participating_inds = np.array([], dtype=int)  # Initialize
+    for ab in bin_range:  # Loop over age bins
+        these_contacts = binomial_filter(layer_probs[ab], inds[age_bins == ab])  # Select individuals according to their participation rate in this layer
+        participating_inds = np.append(participating_inds, these_contacts)
+    return participating_inds
+
