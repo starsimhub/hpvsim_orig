@@ -431,7 +431,6 @@ class HIVsim(hpb.ParsObj):
                             sk_out = sex_key_map[sk]
                             hiv_incidence_rates[year][sk_out] = np.concatenate(
                                 [
-                                    np.array([[9, 0]]),
                                     np.array(df[(df['Year'] == year) & (df['Sex'] == sk_out)][['Age', 'Incidence']],
                                              dtype=hpd.default_float),
                                     np.array([[150, 0]])  # Add another entry so that all older age groups are covered

@@ -1,5 +1,5 @@
 '''
-Script for simulating a population with demographic inputs
+Script for simulating a population with demographic inputs 
 '''
 
 #%% Imports and settings
