@@ -479,10 +479,8 @@ class Sim(hpb.BaseSim):
             results[var+'_genotype_dist'] = init_res(name, n_rows=ng, color=stock_colors[0])
 
         # Vaccination results
-        results['new_vaccinated'] = init_res('Newly vaccinated by genotype', n_rows=ng)
-        results['new_total_vaccinated'] = init_res('Newly vaccinated')
-        results['cum_vaccinated'] = init_res('Cumulative number vaccinated by genotype', n_rows=ng)
-        results['cum_total_vaccinated'] = init_res('Cumulative number vaccinated')
+        results['new_vaccinated'] = init_res('Newly vaccinated')
+        results['cum_vaccinated'] = init_res('Cumulative number vaccinated')
         results['new_doses'] = init_res('New doses')
         results['cum_doses'] = init_res('Cumulative doses')
 
@@ -1120,7 +1118,6 @@ class Sim(hpb.BaseSim):
 
         # Vaccination results
         self.results['cum_vaccinated'][:] = np.cumsum(self.results['new_vaccinated'][:], axis=0)
-        self.results['cum_total_vaccinated'][:] = np.cumsum(self.results['new_total_vaccinated'][:])
         self.results['cum_doses'][:] = np.cumsum(self.results['new_doses'][:])
 
         # Therapeutic vaccination results

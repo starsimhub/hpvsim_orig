@@ -312,12 +312,13 @@ class RoutineDelivery(Intervention):
     '''
     Base class for any intervention that uses routine delivery; handles interpolation of input years.
     '''
-    def __init__(self, years=None, start_year=None, end_year=None, prob=None, annual_prob=True):
+    def __init__(self, years=None, start_year=None, end_year=None, prob=None, annual_prob=True, interpolate=True):
         self.years      = years
         self.start_year = start_year
         self.end_year   = end_year
         self.prob       = sc.promotetoarray(prob)
         self.annual_prob = annual_prob # Determines whether the probability is annual or per timestep
+        self.interpolate = interpolate
         return
 
     def initialize(self, sim):
@@ -347,8 +348,12 @@ class RoutineDelivery(Intervention):
         self.start_point    = sc.findinds(sim.yearvec, self.start_year)[0]
         self.end_point      = sc.findinds(sim.yearvec, self.end_year)[0] + adj_factor
         self.years          = sc.inclusiverange(self.start_year, self.end_year)
-        self.timepoints     = sc.inclusiverange(self.start_point, self.end_point)
-        self.yearvec        = np.arange(self.start_year, self.end_year+adj_factor, sim['dt'])
+        if self.interpolate:
+            self.timepoints = sc.inclusiverange(self.start_point, self.end_point)
+            self.yearvec    = np.arange(self.start_year, self.end_year+adj_factor, sim['dt'])
+        else:
+            self.timepoints = np.arange(self.start_point, self.end_point, int(1/sim['dt']))
+            self.yearvec    = np.arange(self.start_year, self.end_year+1)
 
         # Get the probability input into a format compatible with timepoints
         if len(self.years) != len(self.prob):
@@ -663,7 +668,7 @@ class BaseVaccination(Intervention):
             if len(accept_inds):
                 self.product.administer(sim.people, accept_inds) # Administer the product
 
-                # FIgure out number of doses and newly vaccinated people
+                # Figure out number of doses and newly vaccinated people
                 new_vx_inds = hpu.ifalsei(sim.people.vaccinated, accept_inds)  # Figure out people who are getting vaccinated for the first time
                 n_new_doses = sim.people.scale_flows(accept_inds)  # Scale
                 n_new_people = sim.people.scale_flows(new_vx_inds)  # Scale
@@ -702,10 +707,10 @@ class routine_vx(BaseVaccination, RoutineDelivery):
     '''
 
     def __init__(self, product=None, prob=None, age_range=None, sex=0, eligibility=None,
-                 start_year=None, end_year=None, years=None, **kwargs):
+                 start_year=None, end_year=None, years=None, interpolate=None, **kwargs):
 
         BaseVaccination.__init__(self, product=product, age_range=age_range, sex=sex, eligibility=eligibility, **kwargs)
-        RoutineDelivery.__init__(self, prob=prob, start_year=start_year, end_year=end_year, years=years)
+        RoutineDelivery.__init__(self, prob=prob, start_year=start_year, end_year=end_year, years=years, interpolate=interpolate)
 
     def initialize(self, sim):
         RoutineDelivery.initialize(self, sim) # Initialize this first, as it ensures that prob is interpolated properly
