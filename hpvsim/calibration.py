@@ -211,7 +211,7 @@ class Calibration(sc.prettyobj):
         name_pars_keys = sc.flattendict(name_pars).keys()
         for key in name_pars_keys:
             name = '_'.join(key)
-            sc.setnested(new_pars, list(key), value_pars[name])
+            sc.makenested(new_pars, list(key), value_pars[name])
         return new_pars
     
     def update_dict_pars_init_and_bounds(self, initial_pars, par_bounds, target_pars):
@@ -356,9 +356,6 @@ class Calibration(sc.prettyobj):
             else:
                 sc.setnested(pars, list(key), sampler_fn(sampler_key, low, high, step=step))
 
-            # try:
-            # except:
-            #     print('hi')
         return pars
 
     def run_trial(self, trial, save=True):
