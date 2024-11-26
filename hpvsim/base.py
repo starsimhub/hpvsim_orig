@@ -362,7 +362,7 @@ class BaseSim(ParsObj):
             # try to interpret it as a float, otherwise raise an error
             else:
                 try:
-                    tp_raw  = sc.datetoyear(date) # Get the 'raw' timepoint, not rounded to the nearest timestep
+                    tp_raw  = sc.datetoyear(date).year # Get the 'raw' timepoint, not rounded to the nearest timestep
                 except:
                     try:
                         tp_raw  = float(date) # This must be float, not int, otherwise some attempts to get t will fail

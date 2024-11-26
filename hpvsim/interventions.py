@@ -390,7 +390,7 @@ class CampaignDelivery(Intervention):
             self.timepoints = hpu.true(np.isin(sim.yearvec, self.years))
 
         # Get the probability input into a format compatible with timepoints
-        if len(self.prob) == len(self.years) and self.interpolate:
+        if len(self.prob) == len(self.years):
             self.prob = sc.smoothinterp(np.arange(len(self.timepoints)), np.arange(len(self.years)), self.prob, smoothness=0)
         elif len(self.prob) == 1:
             self.prob = np.array([self.prob[0]] * len(self.timepoints))
