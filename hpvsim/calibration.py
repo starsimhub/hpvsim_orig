@@ -240,8 +240,12 @@ class Calibration(sc.prettyobj):
             for key, val in calib_pars_flatten.items():
                 if key[0] in sim.pars and key[0] not in new_pars:
                     new_pars[key[0]] = sc.dcp(sim.pars[key[0]])
+
                 try:
-                    sc.setnested(new_pars, list(key), val) # only update on keys that have values in sim.pars. If this line makes error, raise error errormsg 
+                    if len(key) == 1:  # Parameter isn't nested
+                        new_pars[key[0]] = val
+                    else:  # Parameter is nested
+                        sc.setnested(new_pars, list(key), val)
                 except Exception as e:
                     errormsg = f"Parameter {'_'.join(key)} is not part of the sim, nor is a custom function specified to use them"
                     raise ValueError(errormsg)       
@@ -345,7 +349,16 @@ class Calibration(sc.prettyobj):
                     raise AttributeError(errormsg) from E
             else:
                 sampler_fn = trial.suggest_float
-            sc.setnested(pars, list(key), sampler_fn(sampler_key, low, high, step=step))
+
+            # Simple case: parameter isn't nested
+            if sampler_key in pars.keys():
+                pars[sampler_key] = sampler_fn(sampler_key, low, high, step=step)
+            else:
+                sc.setnested(pars, list(key), sampler_fn(sampler_key, low, high, step=step))
+
+            # try:
+            # except:
+            #     print('hi')
         return pars
 
     def run_trial(self, trial, save=True):
