@@ -201,6 +201,9 @@ class HIVsim(hpb.ParsObj):
         results["cancer_incidence_by_age_no_hiv"] = init_res(
             "Cancer incidence by age among HIV-", n_rows=na, color=stock_colors[1]
         )
+        results['cancer_rate_ratios'] = init_res('Cancer rate ratios', color=stock_colors[0])
+        results['cancer_rate_ratios_by_age'] = init_res('Cancer rate ratios by age', n_rows=na, color=stock_colors[0])
+
         results["n_females_with_hiv_alive_by_age"] = init_res(
             "Number females with HIV alive by age", n_rows=na
         )
@@ -764,6 +767,10 @@ class HIVsim(hpb.ParsObj):
             )
             * scale_factor
         )
+
+        self.results['cancer_rate_ratios'][:] = safedivide(res['cancer_incidence_with_hiv'][:], res['cancer_incidence_no_hiv'][:])
+        self.results['cancer_rate_ratios_by_age'][:] = safedivide(res['cancer_incidence_by_age_with_hiv'][:], res['cancer_incidence_by_age_no_hiv'][:])
+
         sim.results = sc.mergedicts(simres, self.results)
         return
 
