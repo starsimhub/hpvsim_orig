@@ -513,7 +513,7 @@ class HIVsim(hpb.ParsObj):
 
         return
 
-    def get_hiv_data(self, hiv_datafile=None, art_datafile=None):
+    def get_hiv_data(self, hiv_datafile=None, art_datafile=None, add_lower=False):
         """
         Load HIV incidence and art coverage data, if provided
 
@@ -575,20 +575,27 @@ class HIVsim(hpb.ParsObj):
                         hiv_incidence_rates[year] = dict()
                         for sk in sex_keys:
                             sk_out = sex_key_map[sk]
-                            hiv_incidence_rates[year][sk_out] = np.concatenate(
-                                [
-                                    np.array([[9, 0]]),
-                                    np.array(
-                                        df[
-                                            (df["Year"] == year) & (df["Sex"] == sk_out)
-                                        ][["Age", "Incidence"]],
-                                        dtype=hpd.default_float,
-                                    ),
-                                    np.array(
-                                        [[150, 0]]
-                                    ),  # Add another entry so that all older age groups are covered
+                            inc_plus_bounds = np.concatenate(
+                                [np.array(
+                                    df[
+                                        (df["Year"] == year) & (df["Sex"] == sk_out)
+                                    ][["Age", "Incidence"]],
+                                    dtype=hpd.default_float,
+                                ),
+                                np.array([[150, 0]]),  # Add another entry so that all older age groups are covered
                                 ]
                             )
+                            if add_lower:
+                                # Add lower bound
+                                inc_plus_bounds = np.concatenate(
+                                    [
+                                        np.array([[9, 0]]),
+                                        inc_plus_bounds,
+                                    ]
+                                )
+                            hiv_incidence_rates[year][sk_out] = inc_plus_bounds
+
+            # Now process mortality data
             hiv_mortality_df = pd.concat(hiv_mortality_dfs)
             hiv_mortality = dict()
 
@@ -832,8 +839,6 @@ class HIVsim(hpb.ParsObj):
                                 ]
                                 people.art[art_inds_this_age] = True
                                 people.date_art[art_inds_this_age] = people.t
-
-                                # print(f'{year}: I want {num_art_age_bin[age_bin]} more {age_bin}yo, put {people.scale_flows(art_inds_this_age)} on')
 
                                 # Get indices of people who are on ART who will not be virologically suppressed
                                 art_failure_prob = self["hiv_pars"]["art_failure_prob"]
