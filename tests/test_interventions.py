@@ -291,7 +291,7 @@ def test_all_interventions(do_plot=False, do_save=False, fig_path=None):
     sim.plot(to_plot=to_plot)
 
     fig, ax = plt.subplots(1, 2)
-    for i, result in enumerate(['cancers', 'dysplasias']):
+    for i, result in enumerate(['cancers', 'cins']):
         ax[i].plot(sim0.results['year'], sim0.results[result].values, label='No Screening')
         ax[i].plot(sim.results['year'], sim.results[result].values, label='Screening')
         ax[i].set_ylabel(result)
@@ -578,12 +578,15 @@ if __name__ == '__main__':
     # Start timing and optionally enable interactive plotting
     T = sc.tic()
 
-    sim0 = test_screen_prob()
+    # sim0 = test_screen_prob()
     sim1 = test_all_interventions(do_plot=do_plot)
-    sim2 = test_txvx_noscreen()
-    sim3 = test_screening()
-    scens0 = test_vx_effect()
-    scens1 = test_cytology()
+
+    print([rkey for rkey,res in sim1.results.items() if res.sum()==0 and 'react' not in rkey and 'reinf' not in rkey and 'latent' not in rkey ])
+
+    # sim2 = test_txvx_noscreen()
+    # sim3 = test_screening()
+    # scens0 = test_vx_effect()
+    # scens1 = test_cytology()
 
 
     sc.toc(T)

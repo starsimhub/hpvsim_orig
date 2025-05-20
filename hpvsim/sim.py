@@ -438,14 +438,14 @@ class Sim(hpb.BaseSim):
 
         # Create flows
         for flow in hpd.flows:
-            results[flow.name]                  = init_res(flow.label, color=flow.color)
-            results[flow.name+'_by_genotype']   = init_res(flow.label+' by genotype', n_rows=ng)
-            results[flow.name+'_by_age']        = init_res(flow.label+' by age', n_rows=na, color=flow.color)
+            results[flow.name] = init_res(flow.label, color=flow.color)
+            if flow.by_genotype: results[flow.name+'_by_genotype'] = init_res(flow.label+' by genotype', n_rows=ng)
+            results[flow.name+'_by_age'] = init_res(flow.label+' by age', n_rows=na, color=flow.color)
 
         # Create stocks
         for stock in hpd.PeopleMeta().stock_states:
-            results[f'n_{stock.name}']              = init_res(stock.label, color=stock.color)
-            results[f'n_{stock.name}_by_genotype']  = init_res(stock.label+' by genotype', n_rows=ng)
+            results[f'n_{stock.name}'] = init_res(stock.label, color=stock.color)
+            if stock.shape is 'n_genotypes': results[f'n_{stock.name}_by_genotype'] = init_res(stock.label+' by genotype', n_rows=ng)
 
         # Only by-age stock result we will need is number infectious, susceptible, and with cin, for HPV and CIN prevalence/incidence calculations
         results['n_infectious_by_age']             = init_res('Number infectious by age', n_rows=na, color=stock.color)
@@ -507,7 +507,6 @@ class Sim(hpb.BaseSim):
         results['cum_cancer_treated'] = init_res('Cumulative number treated for cancer')
 
         # Additional cancer results
-        results['detected_cancer_incidence'] = init_res('Detected cancer incidence', color='#fcba03')
         results['cancer_mortality'] = init_res('Cancer mortality')
 
         # Other results
@@ -914,8 +913,10 @@ class Sim(hpb.BaseSim):
             weights = people.scale[inds]
             denom = np.histogram(vals, bins, weights=weights)[0]
             age_specific_incidence = sc.safedivide(cases_by_age, denom)*100e3
+            age_specific_mortality = sc.safedivide(self.results['cancer_deaths_by_age'][:, idx], denom)*100e3
             standard_pop = self.pars['standard_pop'][1, :-1]
             self.results['asr_cancer_incidence'][idx] = np.dot(age_specific_incidence,standard_pop)
+            self.results['asr_cancer_mortality'][idx] = np.dot(age_specific_mortality,standard_pop)
 
             # Save number alive
             alive_inds = hpu.true(people.alive)
@@ -1095,7 +1096,12 @@ class Sim(hpb.BaseSim):
         self.results['cin_prevalence_by_age'][:] = safedivide(res['n_cin_by_age'][:],
                                                                res['n_females_alive_by_age'][:])
 
-        # Compute cancer incidence.
+        # Compute CIN and cancer incidence.
+        demoninator = alive_females - res['n_cin'][:]
+        self.results['cin_incidence'][:]             = res['cins'][:] / demoninator
+        self.results['cin_incidence_by_genotype'][:] = res['cins_by_genotype'][:] / demoninator
+        self.results['cin_incidence_by_age'][:]      = safedivide(res['cins_by_age'][:], res['n_females_alive_by_age'][:])
+
         at_risk_females = alive_females - res['n_cancerous'][:]
         scale_factor = 1e5  # Cancer incidence are displayed as rates per 100k women
         demoninator = at_risk_females / scale_factor

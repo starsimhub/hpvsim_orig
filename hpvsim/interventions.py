@@ -664,13 +664,13 @@ class BaseVaccination(Intervention):
                 self.product.administer(sim.people, accept_inds) # Administer the product
 
                 # Update people's state and dates
+                new_vx_inds = hpu.ifalsei(sim.people.vaccinated, accept_inds)  # Figure out people who are getting vaccinated for the first time
                 sim.people.vaccinated[accept_inds] = True
                 sim.people.date_vaccinated[accept_inds] = sim.t
                 sim.people.doses[accept_inds] += 1
 
                 # Update results
                 idx = int(sim.t / sim.resfreq)
-                new_vx_inds = hpu.ifalsei(sim.people.vaccinated, accept_inds)  # Figure out people who are getting vaccinated for the first time
                 n_new_doses = sim.people.scale_flows(accept_inds)  # Scale
                 n_new_people = sim.people.scale_flows(new_vx_inds)  # Scale
                 sim.results['new_vaccinated'][:,idx] += n_new_people
