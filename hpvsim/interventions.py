@@ -891,9 +891,9 @@ class campaign_screening(BaseScreening, CampaignDelivery):
         screen1 = hpv.campaign_screening(product='hpv', prob=0.2, years=2030) # Screen 20% of the eligible population in 2020
         screen2 = hpv.campaign_screening(product='hpv', prob=0.02, years=[2025,2030]) # Screen 20% of the eligible population in 2025 and again in 2030
     '''
-    def __init__(self, product=None, age_range=None, sex=None, eligibility=None,
+    def __init__(self, product=None, age_range=None, eligibility=None,
                  prob=None, years=None, interpolate=None, **kwargs):
-        BaseScreening.__init__(self, product=product, age_range=age_range, sex=sex, eligibility=eligibility, **kwargs)
+        BaseScreening.__init__(self, product=product, age_range=age_range, eligibility=eligibility, **kwargs)
         CampaignDelivery.__init__(self, prob=prob, years=years, interpolate=interpolate)
 
     def initialize(self, sim):
