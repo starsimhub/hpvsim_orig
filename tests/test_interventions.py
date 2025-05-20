@@ -31,8 +31,7 @@ def test_screen_prob():
 
     target_lifetime_prob = 0.6
     target_triage = 0.8
-    target_ablation = 0.7
-    target_excision = 0.6
+    target_treat = 1
     age_range = [30, 50]
     len_age_range = age_range[1]-age_range[0]
     model_annual_prob = 1 - (1 - target_lifetime_prob)**(1/len_age_range)
@@ -59,7 +58,7 @@ def test_screen_prob():
     to_treat = lambda sim: sim.get_intervention('triage').outcomes['positive']
     assign_tx = hpv.routine_triage(
         product='tx_assigner',
-        prob=target_triage,
+        prob=target_treat,
         annual_prob=False,
         eligibility=to_treat,
         label='assign_tx'
@@ -68,8 +67,8 @@ def test_screen_prob():
     to_ablate = lambda sim: sim.get_intervention('assign_tx').outcomes['ablation']
     ablation = hpv.treat_num(
         product='ablation',  # pass in string or product
-        prob=target_ablation,
-        annual_prob=False,
+        prob=1,
+        # annual_prob=False,
         eligibility=to_ablate,
         label='ablation'
     )
@@ -77,8 +76,8 @@ def test_screen_prob():
     to_excise = lambda sim: sim.get_intervention('assign_tx').outcomes['excision']
     excision = hpv.treat_delay(
         product='excision',  # pass in string or product
-        prob=target_excision,
-        annual_prob=False,
+        prob=1,
+        # annual_prob=False,
         eligibility=to_excise,
         label='excision'
     )
@@ -132,9 +131,8 @@ def test_screen_prob():
         assert np.array_equal(a.n_screened_pos, a.n_triaged)
         assert np.array_equal(a.n_triaged_pos, a.n_assigned_tx)
     print(f'Proportion triaged ({sum(a.n_triaged)/sum(a.n_screened_pos):.2f}) vs target: ({target_triage})')
-    print(f'Proportion assigned treatment ({sum(a.n_assigned_tx)/sum(a.n_triaged_pos):.2f}) vs target: ({target_triage})')
-    print(f'Proportion treated with ablation ({sum(a.n_ablation)/sum(a.n_assigned_ablation):.2f}) vs target: ({target_ablation})')
-    print(f'Proportion treated with excision ({sum(a.n_excision)/sum(a.n_assigned_excision):.2f}) vs target: ({target_excision})')
+    print(f'Proportion assigned treatment ({sum(a.n_assigned_tx)/sum(a.n_triaged_pos):.2f}) vs target: ({target_treat})')
+    print(f'Proportion actually treated ({(sum(a.n_ablation)+sum(a.n_excision))/sum(a.n_assigned_tx):.2f}), target depends on product')
 
     print('Note, mismatches in any of the above are inevitable with small pop sizes, but should be equal for large pop sizes.')
 
@@ -581,11 +579,11 @@ if __name__ == '__main__':
     T = sc.tic()
 
     sim0 = test_screen_prob()
-    sim1 = test_all_interventions(do_plot=do_plot)
-    sim2 = test_txvx_noscreen()
-    sim3 = test_screening()
-    scens0 = test_vx_effect()
-    scens1 = test_cytology()
+    # sim1 = test_all_interventions(do_plot=do_plot)
+    # sim2 = test_txvx_noscreen()
+    # sim3 = test_screening()
+    # scens0 = test_vx_effect()
+    # scens1 = test_cytology()
 
 
     sc.toc(T)

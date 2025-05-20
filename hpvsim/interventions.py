@@ -124,7 +124,7 @@ class Intervention:
         do_plot    (bool): whether or not to plot the intervention
         line_args  (dict): arguments passed to pl.axvline() when plotting
     '''
-    def __init__(self, label=None, show_label=False, do_plot=None, line_args=None, **kwargs):
+    def __init__(self, label=None, show_label=False, do_plot=None, line_args=None):
         # super().__init__(**kwargs)
         self._store_args() # Store the input arguments so the intervention can be recreated
         if label is None: label = self.__class__.__name__ # Use the class name if no label is supplied
@@ -847,8 +847,9 @@ class BaseTriage(BaseTest):
     Args:
         kwargs (dict): passed to BaseTest
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, age_range=None, **kwargs):
         BaseTest.__init__(self, **kwargs)
+        self.age_range = age_range or [30,50] # This is later filtered to exclude people not yet sexually active
 
     def check_eligibility(self, sim):
         return sc.promotetoarray(self.eligibility(sim))
