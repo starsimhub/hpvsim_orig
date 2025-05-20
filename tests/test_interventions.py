@@ -578,16 +578,12 @@ if __name__ == '__main__':
     # Start timing and optionally enable interactive plotting
     T = sc.tic()
 
-    # sim0 = test_screen_prob()
+    sim0 = test_screen_prob()
     sim1 = test_all_interventions(do_plot=do_plot)
-
-    print([rkey for rkey,res in sim1.results.items() if res.sum()==0 and 'react' not in rkey and 'reinf' not in rkey and 'latent' not in rkey ])
-
-    # sim2 = test_txvx_noscreen()
-    # sim3 = test_screening()
-    # scens0 = test_vx_effect()
-    # scens1 = test_cytology()
-
+    sim2 = test_txvx_noscreen()
+    sim3 = test_screening()
+    scens0 = test_vx_effect()
+    scens1 = test_cytology()
 
     sc.toc(T)
     print('Done.')

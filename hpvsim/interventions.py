@@ -825,13 +825,13 @@ class BaseScreening(BaseTest):
         accept_inds = np.array([])
         if sim.t in self.timepoints:
             accept_inds = self.deliver(sim)
+            new_screen_inds = hpu.ifalsei(sim.people.screened, accept_inds)  # Figure out people who are getting screened for the first time
             sim.people.screened[accept_inds] = True
             sim.people.screens[accept_inds] += 1
             sim.people.date_screened[accept_inds] = sim.t
 
             # Store results
             idx = int(sim.t / sim.resfreq)
-            new_screen_inds = hpu.ifalsei(sim.people.screened, accept_inds)  # Figure out people who are getting screened for the first time
             n_new_people = sim.people.scale_flows(new_screen_inds)  # Scale
             n_new_screens = sim.people.scale_flows(accept_inds)  # Scale
             sim.results['new_screened'][idx] += n_new_people
@@ -1030,13 +1030,13 @@ class BaseTreatment(Intervention):
         treat_inds = hpu.itruei(still_eligible, treat_candidates)
 
         # Store treatment and dates
+        new_treat_inds = hpu.ifalsei(sim.people.cin_treated, treat_inds)  # Figure out people who are getting radiation for the first time
         sim.people.cin_treated[treat_inds] = True
         sim.people.cin_treatments[treat_inds] += 1
         sim.people.date_cin_treated[treat_inds] = sim.t
 
         # Store results
         idx = int(sim.t / sim.resfreq)
-        new_treat_inds = hpu.ifalsei(sim.people.cin_treated, treat_inds)  # Figure out people who are getting radiation for the first time
         n_new_cin_treatments = sim.people.scale_flows(treat_inds)  # Scale
         n_new_people = sim.people.scale_flows(new_treat_inds)  # Scale
         sim.results['new_cin_treated'][idx] += n_new_people
@@ -1445,17 +1445,17 @@ class radiation(Product):
         people.date_dead_cancer[inds] += np.ceil(new_dur_cancer / people.pars['dt'])
 
         # Store treatment and dates
+        new_cctreat_inds = hpu.ifalsei(sim.people.cancer_treated, inds)  # Figure out people who are getting radiation for the first time
         sim.people.cancer_treated[inds] = True
         sim.people.cancer_treatments[inds] += 1
         sim.people.date_cancer_treated[inds] = sim.t
 
         # Store results
         idx = int(sim.t / sim.resfreq)
-        new_cctreat_inds = hpu.ifalsei(sim.people.cancer_treated, inds)  # Figure out people who are getting radiation for the first time
-        n_new_radiaitons = sim.people.scale_flows(inds)  # Scale
+        n_new_radiations = sim.people.scale_flows(inds)  # Scale
         n_new_people = sim.people.scale_flows(new_cctreat_inds)  # Scale
         sim.results['new_cancer_treated'][idx] += n_new_people
-        sim.results['new_cancer_treatments'][idx] += n_new_radiaitons
+        sim.results['new_cancer_treatments'][idx] += n_new_radiations
 
         return inds
 
