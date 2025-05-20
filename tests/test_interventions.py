@@ -284,7 +284,7 @@ def test_all_interventions(do_plot=False, do_save=False, fig_path=None):
     sim.run()
     to_plot = {
         'Screens': ['new_screens', 'new_screened'],
-        'Vaccines': ['new_total_vaccinated', 'new_doses'],
+        'Vaccines': ['new_vaccinated', 'new_doses'],
         'Therapeutic vaccine': ['new_tx_vaccinated', 'new_txvx_doses'],
         'Treatments': ['new_cin_treatments', 'new_cin_treated'],
     }

@@ -673,7 +673,7 @@ class BaseVaccination(Intervention):
                 idx = int(sim.t / sim.resfreq)
                 n_new_doses = sim.people.scale_flows(accept_inds)  # Scale
                 n_new_people = sim.people.scale_flows(new_vx_inds)  # Scale
-                sim.results['new_vaccinated'][:,idx] += n_new_people
+                sim.results['new_vaccinated'][idx] += n_new_people
                 sim.results['new_doses'][idx] += n_new_doses
                 self.n_products_used[idx] += n_new_doses
 
