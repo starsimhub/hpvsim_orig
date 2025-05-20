@@ -74,7 +74,7 @@ class Sim(hpb.BaseSim):
         return
 
 
-    def initialize(self, reset=False, init_states=True, init_analyzers=True, **kwargs):
+    def initialize(self, reset=True, init_states=True, init_analyzers=True, **kwargs):
         '''
         Perform all initializations on the sim.
         '''
