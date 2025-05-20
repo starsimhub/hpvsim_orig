@@ -17,7 +17,7 @@ from .settings import options as hpo # For setting global options
 
 
 __all__ = ['Analyzer', 'snapshot', 'age_pyramid', 'age_results', 'age_causal_infection',
-           'cancer_detection', 'dalys', 'analyzer_map']
+           'dalys', 'analyzer_map']
 
 
 class Analyzer(sc.prettyobj):
@@ -740,10 +740,7 @@ class age_results(Analyzer):
             'cins':  ['date_cin', 'cin'],
             'cancers': ['date_cancerous', 'cancerous'],
             'cancer': ['date_cancerous', 'cancerous'],
-            # 'detected_cancer': ['date_detected_cancer', 'detected_cancer'],
-            # 'detected_cancers': ['date_detected_cancer', 'detected_cancer'],
             'cancer_deaths': ['date_dead_cancer', 'dead_cancer'],
-            # 'detected_cancer_deaths': ['date_dead_cancer', 'dead_cancer']
         }
         attr1 = mapping[attr][0]  # Messy way of turning 'total cancers' into 'date_cancerous' and 'cancerous' etc
         attr2 = mapping[attr][1]  # As above
@@ -1192,7 +1189,6 @@ analyzer_map = {
     'age_pyramid': age_pyramid,
     'age_results': age_results,
     'age_causal_infection': age_causal_infection,
-    'cancer_detection': cancer_detection,
     'dalys': dalys,
 }
 
