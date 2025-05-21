@@ -676,7 +676,8 @@ class Calibration(sc.prettyobj):
                     values = []
 
                     # Pull out data
-                    thisdatadf = self.target_data[rn][(self.target_data[rn].year == float(date)) & (self.target_data[rn].name == resname)]
+                    idx = [rr.name.unique()[0] for rr in self.target_data].index(resname)
+                    thisdatadf = self.target_data[idx][(self.target_data[idx].year == float(date)) & (self.target_data[idx].name == resname)]
                     unique_genotypes = thisdatadf.genotype.unique()
 
                     # Start making plot
@@ -725,7 +726,8 @@ class Calibration(sc.prettyobj):
                     ax = axes
                 bins = sc.autolist()
                 values = sc.autolist()
-                thisdatadf = self.target_data[rn+sum(dates_per_result)][self.target_data[rn + sum(dates_per_result)].name == resname]
+                idx = [rr.name.unique()[0] for rr in self.target_data].index(resname)
+                thisdatadf = self.target_data[idx][self.target_data[idx].name == resname]
                 ydata = np.array(thisdatadf.value)
                 x = np.arange(len(ydata))
                 ax.scatter(x, ydata, color=pl.cm.Reds(0.95), marker='s', label='Data')
