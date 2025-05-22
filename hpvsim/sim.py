@@ -445,7 +445,7 @@ class Sim(hpb.BaseSim):
         # Create stocks
         for stock in hpd.PeopleMeta().stock_states:
             results[f'n_{stock.name}'] = init_res(stock.label, color=stock.color)
-            if stock.shape is 'n_genotypes': results[f'n_{stock.name}_by_genotype'] = init_res(stock.label+' by genotype', n_rows=ng)
+            if stock.shape == 'n_genotypes': results[f'n_{stock.name}_by_genotype'] = init_res(stock.label+' by genotype', n_rows=ng)
 
         # Only by-age stock result we will need is number infectious, susceptible, and with cin, for HPV and CIN prevalence/incidence calculations
         results['n_infectious_by_age']             = init_res('Number infectious by age', n_rows=na, color=stock.color)
