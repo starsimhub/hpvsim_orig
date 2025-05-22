@@ -1074,7 +1074,7 @@ class Sim(hpb.BaseSim):
         self.results['hpv_incidence'][:]                = safedivide(res['infections'][:], ng*res['n_susceptible'][:])
         self.results['hpv_incidence_by_genotype'][:]    = safedivide(res['infections_by_genotype'][:], res['n_susceptible_by_genotype'][:])
         self.results['hpv_incidence_by_age'][:]         = safedivide(res['infections_by_age'][:], res['n_susceptible_by_age'][:])
-        self.results['hpv_prevalence'][:]               = safedivide(res['n_infectious'][:], ng*res['n_alive'][:])
+        self.results['hpv_prevalence'][:]               = safedivide(res['n_infectious'][:], res['n_alive'][:])
         self.results['hpv_prevalence_by_genotype'][:]   = safedivide(res['n_infectious_by_genotype'][:], res['n_alive'][:])
         self.results['hpv_prevalence_by_age'][:]        = safedivide(res['n_infectious_by_age'][:], res['n_alive_by_age'][:])
 
@@ -1087,7 +1087,7 @@ class Sim(hpb.BaseSim):
         self.results['precin_prevalence_by_genotype'][:] = safedivide(res['n_precin_by_genotype'][:], alive_females)
         self.results['precin_prevalence_by_age'][:] = safedivide(res['n_precin_by_age'][:],
                                                                res['n_females_alive_by_age'][:])
-        self.results['cin_prevalence'][:] = safedivide(res['n_cin'][:], ng*alive_females)
+        self.results['cin_prevalence'][:] = safedivide(res['n_cin'][:], alive_females)
         self.results['cin_prevalence_by_genotype'][:] = safedivide(res['n_cin_by_genotype'][:], alive_females)
         self.results['cin_prevalence_by_age'][:] = safedivide(res['n_cin_by_age'][:],
                                                                res['n_females_alive_by_age'][:])
