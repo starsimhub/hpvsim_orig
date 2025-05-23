@@ -445,7 +445,7 @@ class Sim(hpb.BaseSim):
         # Create stocks
         for stock in hpd.PeopleMeta().stock_states:
             results[f'n_{stock.name}'] = init_res(stock.label, color=stock.color)
-            if stock.shape is 'n_genotypes': results[f'n_{stock.name}_by_genotype'] = init_res(stock.label+' by genotype', n_rows=ng)
+            if stock.shape == 'n_genotypes': results[f'n_{stock.name}_by_genotype'] = init_res(stock.label+' by genotype', n_rows=ng)
 
         # Only by-age stock result we will need is number infectious, susceptible, and with cin, for HPV and CIN prevalence/incidence calculations
         results['n_infectious_by_age']             = init_res('Number infectious by age', n_rows=na, color=stock.color)
@@ -1074,7 +1074,7 @@ class Sim(hpb.BaseSim):
         self.results['hpv_incidence'][:]                = safedivide(res['infections'][:], ng*res['n_susceptible'][:])
         self.results['hpv_incidence_by_genotype'][:]    = safedivide(res['infections_by_genotype'][:], res['n_susceptible_by_genotype'][:])
         self.results['hpv_incidence_by_age'][:]         = safedivide(res['infections_by_age'][:], res['n_susceptible_by_age'][:])
-        self.results['hpv_prevalence'][:]               = safedivide(res['n_infectious'][:], ng*res['n_alive'][:])
+        self.results['hpv_prevalence'][:]               = safedivide(res['n_infectious'][:], res['n_alive'][:])
         self.results['hpv_prevalence_by_genotype'][:]   = safedivide(res['n_infectious_by_genotype'][:], res['n_alive'][:])
         self.results['hpv_prevalence_by_age'][:]        = safedivide(res['n_infectious_by_age'][:], res['n_alive_by_age'][:])
 
@@ -1087,7 +1087,7 @@ class Sim(hpb.BaseSim):
         self.results['precin_prevalence_by_genotype'][:] = safedivide(res['n_precin_by_genotype'][:], alive_females)
         self.results['precin_prevalence_by_age'][:] = safedivide(res['n_precin_by_age'][:],
                                                                res['n_females_alive_by_age'][:])
-        self.results['cin_prevalence'][:] = safedivide(res['n_cin'][:], ng*alive_females)
+        self.results['cin_prevalence'][:] = safedivide(res['n_cin'][:], alive_females)
         self.results['cin_prevalence_by_genotype'][:] = safedivide(res['n_cin_by_genotype'][:], alive_females)
         self.results['cin_prevalence_by_age'][:] = safedivide(res['n_cin_by_age'][:],
                                                                res['n_females_alive_by_age'][:])
