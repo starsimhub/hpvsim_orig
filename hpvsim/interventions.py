@@ -124,7 +124,7 @@ class Intervention:
         do_plot    (bool): whether or not to plot the intervention
         line_args  (dict): arguments passed to pl.axvline() when plotting
     '''
-    def __init__(self, label=None, show_label=False, do_plot=None, line_args=None, **kwargs):
+    def __init__(self, label=None, show_label=False, do_plot=None, line_args=None):
         # super().__init__(**kwargs)
         self._store_args() # Store the input arguments so the intervention can be recreated
         if label is None: label = self.__class__.__name__ # Use the class name if no label is supplied
@@ -664,16 +664,16 @@ class BaseVaccination(Intervention):
                 self.product.administer(sim.people, accept_inds) # Administer the product
 
                 # Update people's state and dates
+                new_vx_inds = hpu.ifalsei(sim.people.vaccinated, accept_inds)  # Figure out people who are getting vaccinated for the first time
                 sim.people.vaccinated[accept_inds] = True
                 sim.people.date_vaccinated[accept_inds] = sim.t
                 sim.people.doses[accept_inds] += 1
 
                 # Update results
                 idx = int(sim.t / sim.resfreq)
-                new_vx_inds = hpu.ifalsei(sim.people.vaccinated, accept_inds)  # Figure out people who are getting vaccinated for the first time
                 n_new_doses = sim.people.scale_flows(accept_inds)  # Scale
                 n_new_people = sim.people.scale_flows(new_vx_inds)  # Scale
-                sim.results['new_vaccinated'][:,idx] += n_new_people
+                sim.results['new_vaccinated'][idx] += n_new_people
                 sim.results['new_doses'][idx] += n_new_doses
                 self.n_products_used[idx] += n_new_doses
 
@@ -825,13 +825,13 @@ class BaseScreening(BaseTest):
         accept_inds = np.array([])
         if sim.t in self.timepoints:
             accept_inds = self.deliver(sim)
+            new_screen_inds = hpu.ifalsei(sim.people.screened, accept_inds)  # Figure out people who are getting screened for the first time
             sim.people.screened[accept_inds] = True
             sim.people.screens[accept_inds] += 1
             sim.people.date_screened[accept_inds] = sim.t
 
             # Store results
             idx = int(sim.t / sim.resfreq)
-            new_screen_inds = hpu.ifalsei(sim.people.screened, accept_inds)  # Figure out people who are getting screened for the first time
             n_new_people = sim.people.scale_flows(new_screen_inds)  # Scale
             n_new_screens = sim.people.scale_flows(accept_inds)  # Scale
             sim.results['new_screened'][idx] += n_new_people
@@ -847,8 +847,9 @@ class BaseTriage(BaseTest):
     Args:
         kwargs (dict): passed to BaseTest
     '''
-    def __init__(self, **kwargs):
+    def __init__(self, age_range=None, **kwargs):
         BaseTest.__init__(self, **kwargs)
+        self.age_range = age_range or [30,50] # This is later filtered to exclude people not yet sexually active
 
     def check_eligibility(self, sim):
         return sc.promotetoarray(self.eligibility(sim))
@@ -890,9 +891,9 @@ class campaign_screening(BaseScreening, CampaignDelivery):
         screen1 = hpv.campaign_screening(product='hpv', prob=0.2, years=2030) # Screen 20% of the eligible population in 2020
         screen2 = hpv.campaign_screening(product='hpv', prob=0.02, years=[2025,2030]) # Screen 20% of the eligible population in 2025 and again in 2030
     '''
-    def __init__(self, product=None, age_range=None, sex=None, eligibility=None,
+    def __init__(self, product=None, age_range=None, eligibility=None,
                  prob=None, years=None, interpolate=None, **kwargs):
-        BaseScreening.__init__(self, product=product, age_range=age_range, sex=sex, eligibility=eligibility, **kwargs)
+        BaseScreening.__init__(self, product=product, age_range=age_range, eligibility=eligibility, **kwargs)
         CampaignDelivery.__init__(self, prob=prob, years=years, interpolate=interpolate)
 
     def initialize(self, sim):
@@ -1029,13 +1030,13 @@ class BaseTreatment(Intervention):
         treat_inds = hpu.itruei(still_eligible, treat_candidates)
 
         # Store treatment and dates
+        new_treat_inds = hpu.ifalsei(sim.people.cin_treated, treat_inds)  # Figure out people who are getting radiation for the first time
         sim.people.cin_treated[treat_inds] = True
         sim.people.cin_treatments[treat_inds] += 1
         sim.people.date_cin_treated[treat_inds] = sim.t
 
         # Store results
         idx = int(sim.t / sim.resfreq)
-        new_treat_inds = hpu.ifalsei(sim.people.cin_treated, treat_inds)  # Figure out people who are getting radiation for the first time
         n_new_cin_treatments = sim.people.scale_flows(treat_inds)  # Scale
         n_new_people = sim.people.scale_flows(new_treat_inds)  # Scale
         sim.results['new_cin_treated'][idx] += n_new_people
@@ -1444,17 +1445,17 @@ class radiation(Product):
         people.date_dead_cancer[inds] += np.ceil(new_dur_cancer / people.pars['dt'])
 
         # Store treatment and dates
+        new_cctreat_inds = hpu.ifalsei(sim.people.cancer_treated, inds)  # Figure out people who are getting radiation for the first time
         sim.people.cancer_treated[inds] = True
         sim.people.cancer_treatments[inds] += 1
         sim.people.date_cancer_treated[inds] = sim.t
 
         # Store results
         idx = int(sim.t / sim.resfreq)
-        new_cctreat_inds = hpu.ifalsei(sim.people.cancer_treated, inds)  # Figure out people who are getting radiation for the first time
-        n_new_radiaitons = sim.people.scale_flows(inds)  # Scale
+        n_new_radiations = sim.people.scale_flows(inds)  # Scale
         n_new_people = sim.people.scale_flows(new_cctreat_inds)  # Scale
         sim.results['new_cancer_treated'][idx] += n_new_people
-        sim.results['new_cancer_treatments'][idx] += n_new_radiaitons
+        sim.results['new_cancer_treatments'][idx] += n_new_radiations
 
         return inds
 

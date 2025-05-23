@@ -624,11 +624,6 @@ class People(hpb.BasePeople):
             self.age[inds], bins=self.age_bin_edges, weights=self.scale[inds]
         )[0]
 
-        # check which of these were detected by symptom or screening
-        self.flows["detected_cancer_deaths"] += self.scale_flows(
-            hpu.true(self.detected_cancer[inds])
-        )
-
         return cases_by_age, self.scale_flows(inds)
 
     def check_clearance(self, genotype):
