@@ -669,15 +669,12 @@ class age_results(Analyzer):
                 rdict.size = na
                 rdict.by_genotype = False
             rdict.by_hiv = False
-            if '_with_hiv' in result_name:
-                result_name = result_name.replace('_with_hiv', '')  # remove "_with_hiv" from result name
-                rdict.by_hiv = True
-                rdict.hiv_attr = True
-            elif '_no_hiv' in result_name:
-                result_name = result_name.replace('_no_hiv', '')  # remove "_no_hiv" from result name
-                rdict.by_hiv = True
-                rdict.hiv_attr = False
-
+            hiv_labels = ['_with_hiv', '_no_hiv']
+            for hiv_label in hiv_labels:
+                if hiv_label in result_name:
+                    rdict.by_hiv = True
+                    rdict.hiv_attr = 'with' if 'with' in hiv_label else 'no'
+                    result_name = result_name.replace(hiv_label, '')  # remove "_with_hiv" or "_no_hiv" from result name
             # Figure out if it's a flow or incidence
             if result_name in hpd.flow_keys or 'incidence' in result_name or 'mortality' in result_name:
                 date_attr, attr = self.convert_rname_flows(result_name)
@@ -689,6 +686,15 @@ class age_results(Analyzer):
 
             rdict.attr = attr
             rdict.date_attr = date_attr
+
+            # Add special case for rate ratios
+            if result_name == 'cancer_hiv_rate_ratios':
+                rdict.by_hiv = True
+                rdict.hiv_attr = 'ratio'
+                result_name = 'cancers'
+                rdict.result_type = 'stock'
+                rdict.attr = 'cancerous'
+                rdict.date_attr = 'date_cancerous'
 
             # Initialize results
             for year in rdict.years:
@@ -796,16 +802,23 @@ class age_results(Analyzer):
 
                     if not rdict.by_genotype:
                         if rdict.by_hiv:
-                            if rdict.hiv_attr:
+                            if rdict.hiv_attr == 'with':
                                 inds = (ppl[rdict.attr].any(axis=0) * ppl['hiv']).nonzero()[-1]
-                            else:
+                                self.results[rkey][date] = bin_ages(inds, bins)
+                            elif rdict.hiv_attr == 'no':
                                 inds = (ppl[rdict.attr].any(axis=0) * ~ppl['hiv']).nonzero()[-1]
+                                self.results[rkey][date] = bin_ages(inds, bins)
+                            elif rdict.hiv_attr == 'ratio':
+                                hiv_inds = (ppl[rdict.attr].any(axis=0) * ppl['hiv']).nonzero()[-1]
+                                no_hiv_inds = (ppl[rdict.attr].any(axis=0) * ~ppl['hiv']).nonzero()[-1]
+                                self.results[rkey][date] = sc.safedivide(bin_ages(hiv_inds, bins), bin_ages(no_hiv_inds, bins))
                         elif isinstance(rdict.attr, list):
                             inds = (ppl[rdict.attr[0]].any(axis=0) + ppl[rdict.attr[1]].any(axis=0)).nonzero()[-1]
                             inds = np.unique(inds)
+                            self.results[rkey][date] = bin_ages(inds, bins)
                         else:
                             inds = ppl[rdict.attr].any(axis=0).nonzero()[-1]
-                        self.results[rkey][date] = bin_ages(inds, bins)
+                            self.results[rkey][date] = bin_ages(inds, bins)
                     else:
                         for g in range(ng):
                             inds = ppl[rdict.attr][g, :].nonzero()[-1]
@@ -817,9 +830,9 @@ class age_results(Analyzer):
                 if 'prevalence' in rkey:
                     if 'hpv' in rkey:  # Denominator is whole population
                         if rdict.by_hiv:
-                            if rdict.hiv_attr:
+                            if rdict.hiv_attr == 'with':
                                 inds = sc.findinds(ppl['hiv'])
-                            else:
+                            elif rdict.hiv_attr == 'no':
                                 inds = sc.findinds(~ppl['hiv'])
                             denom = bin_ages(inds=inds, bins=bins)
                         else:
@@ -835,9 +848,9 @@ class age_results(Analyzer):
                         denom = bin_ages(inds=hpu.true(ppl.sus_pool), bins=bins)
                     else:  # Denominator is females at risk for cancer
                         if rdict.by_hiv:
-                            if rdict.hiv_attr:
+                            if rdict.hiv_attr == 'with':
                                 inds = sc.findinds(ppl.is_female_alive & ppl['hiv'] * ~ppl.cancerous.any(axis=0))
-                            else:
+                            elif rdict.hiv_attr == 'no':
                                 inds = sc.findinds(ppl.is_female_alive & ~ppl['hiv'] * ~ppl.cancerous.any(axis=0))
                         else:
                             inds = sc.findinds(ppl.is_female_alive & ~ppl.cancerous.any(axis=0))
