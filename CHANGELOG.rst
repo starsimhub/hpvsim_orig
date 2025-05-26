@@ -8,6 +8,13 @@ All notable changes to the codebase are documented in this file. Changes that ma
    :local:
    :depth: 1
 
+Version 2.2.0 (2025-05-23)
+---------------------------
+- Refresh results: ensure all main results are populated, remove cancer detection results, and fix bug with HPV prevalence calculations
+- Updates to docs
+- *Github info* PR `653 <https://github.com/starsimhub/hpvsim_orig/pull/673>`__
+
+
 Version 2.1.0 (2025-03-25)
 ---------------------------
 - Updates how HPV prognoses are re-evaluated for WLWH
