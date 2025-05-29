@@ -133,7 +133,7 @@ class Calibration(sc.prettyobj):
         self.sim['analyzers'] += [ar]
         if hiv_pars is not None:
             self.sim['model_hiv'] = True # if calibrating HIV parameters, make sure model is running HIV
-        self.sim.initialize()
+        self.sim.initialize(init_intvs=False)
         if self.sim['model_hiv']:
             self.sim.results = sc.mergedicts(self.sim.results, self.sim.hivsim.results)
         for rkey in sim_results.keys():
