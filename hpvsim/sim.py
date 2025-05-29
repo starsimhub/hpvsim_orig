@@ -74,7 +74,7 @@ class Sim(hpb.BaseSim):
         return
 
 
-    def initialize(self, reset=True, init_states=True, init_analyzers=True, **kwargs):
+    def initialize(self, reset=True, init_states=True, init_intvs=True, init_analyzers=True, **kwargs):
         '''
         Perform all initializations on the sim.
         '''
@@ -85,7 +85,7 @@ class Sim(hpb.BaseSim):
         hpu.set_seed(self['rand_seed']) # Reset the random seed before the population is created
         self.init_genotypes() # Initialize the genotypes
         self.init_results() # After initializing the genotypes and people, create the results structure
-        self.init_interventions()  # Initialize the interventions BEFORE the people, because then vaccination interventions get counted in immunity structures
+        if init_intvs: self.init_interventions()  # Initialize the interventions BEFORE the people, because then vaccination interventions get counted in immunity structures
         self.init_immunity() # Includes immunity matrices and cumulative dysplasia arrays
         self.init_people(reset=reset, init_states=init_states, **kwargs) # Create all the people (the heaviest step)
         if init_analyzers: self.init_analyzers()  # ...and the analyzers...
