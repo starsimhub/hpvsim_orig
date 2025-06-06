@@ -24,9 +24,9 @@ HPVsim has been used for analyses in several countries. Academic papers that hav
 
 1. **Inferring the natural history of HPV from global cancer registries: insights from a multi-country calibration** (2024). Stuart RM, Cohen JA, Abeysuriya RG, Sanz-Leon P, Kerr CC, Rao DW, Klein DJ. *Sci Rep* 14, 15875. https://doi.org/10.1038/s41598-024-65842-3
 
-2. **HPV DNA Screening and Vaccination Strategies in Tunisia** (2025). Lahdhiri A, Benzina B, Ennaifer E, Tounsi H, Gzara A, Rammeh-Rommani S, Laraj O, Arfaoui H, Stuart RM Kebir, A, BenMiled S (2025). *Sci Rep*, forthcoming. 
+2. **Can pruning improve agent-based models’ calibration? An application to HPVsim** (2025). Sturman F, Swallow B, Kerr CC, Stuart RM, Panovska-Griffiths J. *Journal of Theoretical Biology*, https://doi.org/10.1016/j.jtbi.2025.112130.
 
-3. **Can pruning improve agent-based models’ calibration? An application to HPVsim** (2025). Sturman F, Swallow B, Kerr CC, Stuart RM, Panovska-Griffiths J. *Journal of Theoretical Biology*, forthcoming.
+3. **HPV DNA Screening and Vaccination Strategies in Tunisia** (2025). Lahdhiri A, Benzina B, Ennaifer E, Tounsi H, Gzara A, Rammeh-Rommani S, Laraj O, Arfaoui H, Stuart RM Kebir, A, BenMiled S (2025). *Sci Rep*, forthcoming. 
 
 
 Installation
