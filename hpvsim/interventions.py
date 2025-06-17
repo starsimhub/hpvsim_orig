@@ -717,10 +717,10 @@ class campaign_vx(BaseVaccination, CampaignDelivery):
     '''
 
     def __init__(self, product=None, prob=None, age_range=None, sex=0, eligibility=None,
-                 years=None, interpolate=True, **kwargs):
+                 years=None, interpolate=True, annual_prob=None, **kwargs):
 
         BaseVaccination.__init__(self, product=product, age_range=age_range, sex=sex, eligibility=eligibility, **kwargs)
-        CampaignDelivery.__init__(self, prob=prob, years=years, interpolate=interpolate)
+        CampaignDelivery.__init__(self, prob=prob, annual_prob=annual_prob, years=years, interpolate=interpolate)
 
     def initialize(self, sim):
         CampaignDelivery.initialize(self, sim) # Initialize this first, as it ensures that prob is interpolated properly
