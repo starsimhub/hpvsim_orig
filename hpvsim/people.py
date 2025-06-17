@@ -761,6 +761,7 @@ class People(hpb.BasePeople):
         if new_births is None:
             years = self.pars['birth_rates']['year']
             rates = self.pars['birth_rates']['cbr']
+
             this_birth_rate = (
                 self.pars['rel_birth']
                 * np.interp(year, years, rates)
