@@ -9,6 +9,12 @@ All notable changes to the codebase are documented in this file. Changes that ma
    :depth: 1
 
 
+Version 2.2.2 (2025-06-20)
+---------------------------
+- Bugfix to allow running simulations beyond 2100
+- *Github info* PR `681 <https://github.com/starsimhub/hpvsim_orig/pull/681>`__
+
+
 Version 2.2.1 (2025-05-29)
 ---------------------------
 - Bugfix for running calibrations to prevent interventions being reinitialized
