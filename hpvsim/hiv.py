@@ -48,8 +48,7 @@ class HIVsim(hpb.ParsObj):
             "time_to_hiv_death_scale_pars": dict(m=21.182, b=-0.2717),  # scale parameter for weibull distribution, based on https://royalsocietypublishing.org/action/downloadSupplement?doi=10.1098%2Frsif.2013.0613&file=rsif20130613supp1.pdf
             "hiv_death_adj": 1,
             "cd4_start": dict(dist="normal", par1=594, par2=20),
-            "cd4_pars": dict(m=24.363, b=-16.672),
-            ** 2,  # based on https://docs.idmod.org/projects/emod-hiv/en/latest/hiv-model-healthcare-systems.html?highlight=art#art-s-impact-on-cd4-count
+            "cd4_pars": dict(m=24.363, b=-16.672),  # based on https://docs.idmod.org/projects/emod-hiv/en/latest/hiv-model-healthcare-systems.html?highlight=art#art-s-impact-on-cd4-count
             "cd4_reconstitution_pars": dict(b1=15.584, b2=-0.2113),  # growth in CD4 count following ART initiation
             "art_failure_prob": 0.0,  # Percentage of people on ART who will fail treatment
             "dt_art": 1.0,  # Timestep for art updates (in years)
