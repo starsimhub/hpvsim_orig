@@ -651,7 +651,6 @@ class BaseVaccination(Intervention):
         accept_inds = np.array([])
 
         if do_apply:
-
             # Select people for screening and then record the number of screens
             eligible_inds   = self.check_eligibility(sim) # Check eligibility
             if len(self.timepoints)==0: # No timepoints provided
@@ -873,9 +872,9 @@ class routine_screening(BaseScreening, RoutineDelivery):
         screen3 = hpv.routine_screening(product='hpv', prob=np.linspace(0.005,0.025,5), years=np.arange(2020,2025)) # Scale up screening over 5 years starting in 2020
     '''
     def __init__(self, product=None, prob=None, eligibility=None, age_range=None,
-                         years=None, start_year=None, end_year=None, **kwargs):
+                         years=None, start_year=None, end_year=None, annual_prob=None, **kwargs):
         BaseScreening.__init__(self, product=product, age_range=age_range, eligibility=eligibility, **kwargs)
-        RoutineDelivery.__init__(self, prob=prob, start_year=start_year, end_year=end_year, years=years)
+        RoutineDelivery.__init__(self, prob=prob, start_year=start_year, end_year=end_year, annual_prob=annual_prob, years=years)
 
     def initialize(self, sim):
         RoutineDelivery.initialize(self, sim) # Initialize this first, as it ensures that prob is interpolated properly
@@ -892,9 +891,9 @@ class campaign_screening(BaseScreening, CampaignDelivery):
         screen2 = hpv.campaign_screening(product='hpv', prob=0.02, years=[2025,2030]) # Screen 20% of the eligible population in 2025 and again in 2030
     '''
     def __init__(self, product=None, age_range=None, eligibility=None,
-                 prob=None, years=None, interpolate=None, **kwargs):
+                 prob=None, years=None, interpolate=None, annual_prob=None, **kwargs):
         BaseScreening.__init__(self, product=product, age_range=age_range, eligibility=eligibility, **kwargs)
-        CampaignDelivery.__init__(self, prob=prob, years=years, interpolate=interpolate)
+        CampaignDelivery.__init__(self, prob=prob, years=years, interpolate=interpolate, annual_prob=annual_prob)
 
     def initialize(self, sim):
         CampaignDelivery.initialize(self, sim) # Initialize this first, as it ensures that prob is interpolated properly
