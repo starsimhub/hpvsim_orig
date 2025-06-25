@@ -936,9 +936,9 @@ class campaign_triage(BaseTriage, CampaignDelivery):
         screened_pos = lambda sim: sim.get_intervention('screening').outcomes['positive']
         triage1 = hpv.campaign_triage(product='pos_screen_assessment', eligibility=screen_pos, prob=0.9, years=2030)
     '''
-    def __init__(self, product=None, age_range=None, sex=None, eligibility=None,
+    def __init__(self, product=None, age_range=None, eligibility=None,
                  prob=None, years=None, interpolate=None, annual_prob=None, **kwargs):
-        BaseTriage.__init__(self, product=product, age_range=age_range, sex=sex, eligibility=eligibility, **kwargs)
+        BaseTriage.__init__(self, product=product, age_range=age_range, eligibility=eligibility, **kwargs)
         CampaignDelivery.__init__(self, prob=prob, years=years, interpolate=interpolate, annual_prob=annual_prob)
 
     def initialize(self, sim):
