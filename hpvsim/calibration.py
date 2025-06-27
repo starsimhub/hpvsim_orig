@@ -715,6 +715,7 @@ class Calibration(sc.prettyobj):
                     # Set title and labels
                     ax.set_xlabel('Age group')
                     ax.set_title(f'{self.result_args[resname].name}, {date}')
+                    sc.setylim(data=[ydata, modeldf['values']], ax=ax)
                     ax.legend()
                     ax.set_xticks(x, age_labels[resname], rotation=45)
                     plot_count += 1

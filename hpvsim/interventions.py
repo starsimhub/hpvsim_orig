@@ -651,7 +651,6 @@ class BaseVaccination(Intervention):
         accept_inds = np.array([])
 
         if do_apply:
-
             # Select people for screening and then record the number of screens
             eligible_inds   = self.check_eligibility(sim) # Check eligibility
             if len(self.timepoints)==0: # No timepoints provided
@@ -873,9 +872,9 @@ class routine_screening(BaseScreening, RoutineDelivery):
         screen3 = hpv.routine_screening(product='hpv', prob=np.linspace(0.005,0.025,5), years=np.arange(2020,2025)) # Scale up screening over 5 years starting in 2020
     '''
     def __init__(self, product=None, prob=None, eligibility=None, age_range=None,
-                         years=None, start_year=None, end_year=None, **kwargs):
+                         years=None, start_year=None, end_year=None, annual_prob=None, **kwargs):
         BaseScreening.__init__(self, product=product, age_range=age_range, eligibility=eligibility, **kwargs)
-        RoutineDelivery.__init__(self, prob=prob, start_year=start_year, end_year=end_year, years=years)
+        RoutineDelivery.__init__(self, prob=prob, start_year=start_year, end_year=end_year, annual_prob=annual_prob, years=years)
 
     def initialize(self, sim):
         RoutineDelivery.initialize(self, sim) # Initialize this first, as it ensures that prob is interpolated properly
@@ -892,9 +891,9 @@ class campaign_screening(BaseScreening, CampaignDelivery):
         screen2 = hpv.campaign_screening(product='hpv', prob=0.02, years=[2025,2030]) # Screen 20% of the eligible population in 2025 and again in 2030
     '''
     def __init__(self, product=None, age_range=None, eligibility=None,
-                 prob=None, years=None, interpolate=None, **kwargs):
+                 prob=None, years=None, interpolate=None, annual_prob=None, **kwargs):
         BaseScreening.__init__(self, product=product, age_range=age_range, eligibility=eligibility, **kwargs)
-        CampaignDelivery.__init__(self, prob=prob, years=years, interpolate=interpolate)
+        CampaignDelivery.__init__(self, prob=prob, years=years, interpolate=interpolate, annual_prob=annual_prob)
 
     def initialize(self, sim):
         CampaignDelivery.initialize(self, sim) # Initialize this first, as it ensures that prob is interpolated properly
@@ -936,9 +935,9 @@ class campaign_triage(BaseTriage, CampaignDelivery):
         screened_pos = lambda sim: sim.get_intervention('screening').outcomes['positive']
         triage1 = hpv.campaign_triage(product='pos_screen_assessment', eligibility=screen_pos, prob=0.9, years=2030)
     '''
-    def __init__(self, product=None, age_range=None, sex=None, eligibility=None,
+    def __init__(self, product=None, age_range=None, eligibility=None,
                  prob=None, years=None, interpolate=None, annual_prob=None, **kwargs):
-        BaseTriage.__init__(self, product=product, age_range=age_range, sex=sex, eligibility=eligibility, **kwargs)
+        BaseTriage.__init__(self, product=product, age_range=age_range, eligibility=eligibility, **kwargs)
         CampaignDelivery.__init__(self, prob=prob, years=years, interpolate=interpolate, annual_prob=annual_prob)
 
     def initialize(self, sim):
@@ -1386,13 +1385,12 @@ class tx(Product):
                         people[f'date_{state}'][g, eff_treat_inds] = np.nan
                         people[f'date_cancerous'][g, eff_treat_inds] = np.nan
                         people['date_clearance'][g, eff_treat_inds] = people.t + 1
-                        # Determine whether women also clear infection
+                        # # Determine whether women also clear infection
                         # clearance_probs = np.full(len(eff_treat_inds), self.clearance, dtype=hpd.default_float)
                         # to_clear = hpu.binomial_arr(clearance_probs)  # Determine who will have effective treatment
                         # clear_inds = eff_treat_inds[to_clear]
                         # if len(clear_inds):
                         #     # If so, set date of clearance of infection on next timestep
-                        #
                         #     people.dur_infection[g, clear_inds] = (people.t - people.date_infectious[g, clear_inds]) * people.pars['dt']
 
         tx_successful = np.array(list(set(tx_successful)))

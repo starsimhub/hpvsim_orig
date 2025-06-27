@@ -45,15 +45,11 @@ class HIVsim(hpb.ParsObj):
             "rel_reactivation_prob": 3,  # Unused for now
             "model_hiv_death": True,  # whether or not to model HIV mortality. Typically only set to False for testing purposes
             "time_to_hiv_death_shape": 2,  # shape parameter for weibull distribution, based on https://royalsocietypublishing.org/action/downloadSupplement?doi=10.1098%2Frsif.2013.0613&file=rsif20130613supp1.pdf
-            "time_to_hiv_death_scale": lambda a: 21.182
-            - 0.2717
-            * a,  # scale parameter for weibull distribution, based on https://royalsocietypublishing.org/action/downloadSupplement?doi=10.1098%2Frsif.2013.0613&file=rsif20130613supp1.pdf
+            "time_to_hiv_death_scale_pars": dict(m=21.182, b=-0.2717),  # scale parameter for weibull distribution, based on https://royalsocietypublishing.org/action/downloadSupplement?doi=10.1098%2Frsif.2013.0613&file=rsif20130613supp1.pdf
             "hiv_death_adj": 1,
             "cd4_start": dict(dist="normal", par1=594, par2=20),
-            "cd4_trajectory": lambda f: (24.363 - 16.672 * f)
-            ** 2,  # based on https://docs.idmod.org/projects/emod-hiv/en/latest/hiv-model-healthcare-systems.html?highlight=art#art-s-impact-on-cd4-count
-            "cd4_reconstitution": lambda m: 15.584 * m
-            - 0.2113 * m**2,  # growth in CD4 count following ART initiation
+            "cd4_pars": dict(m=24.363, b=-16.672),  # based on https://docs.idmod.org/projects/emod-hiv/en/latest/hiv-model-healthcare-systems.html?highlight=art#art-s-impact-on-cd4-count
+            "cd4_reconstitution_pars": dict(b1=15.584, b2=-0.2113),  # growth in CD4 count following ART initiation
             "art_failure_prob": 0.0,  # Percentage of people on ART who will fail treatment
             "dt_art": 1.0,  # Timestep for art updates (in years)
         }
@@ -63,7 +59,9 @@ class HIVsim(hpb.ParsObj):
         self.init_results(sim)
 
         y = np.linspace(0, 1, 101)
-        cd4_decline = self["hiv_pars"]["cd4_trajectory"](y)
+        # Calculate the CD4 trajectory based on the parameters
+        m, b = self["hiv_pars"]["cd4_pars"]["m"], self["hiv_pars"]["cd4_pars"]["b"]
+        cd4_decline = m + b* y  # CD4 decline trajectory
         self.cd4_decline_diff = np.diff(cd4_decline)
         sim.pars["hiv_pars"]["mortality_rates"] = self.pars["mortality_rates"]
         return
@@ -235,7 +233,8 @@ class HIVsim(hpb.ParsObj):
         shape = self["hiv_pars"]["time_to_hiv_death_shape"]
         dt = people.pars["dt"]
         if self["hiv_pars"]["model_hiv_death"]:
-            scale = self["hiv_pars"]["time_to_hiv_death_scale"](people.age[inds])
+            m, b = self["hiv_pars"]["time_to_hiv_death_scale_pars"]["m"], self["hiv_pars"]["time_to_hiv_death_scale_pars"]["b"]
+            scale = m + b*people.age[inds]
             adjust = self["hiv_pars"]["hiv_death_adj"]
             scale = np.maximum(scale, 0)
             time_to_hiv_death = adjust * weibull_min.rvs(
@@ -300,7 +299,8 @@ class HIVsim(hpb.ParsObj):
             # Now take care of people successfully on ART (CD4 reconstitutes)
             mpy = 12
             months_on_ART = (people.t - people.date_art[art_success_inds]) * mpy
-            cd4_change = self["hiv_pars"]["cd4_reconstitution"](months_on_ART)
+            b1, b2 = self["hiv_pars"]["cd4_reconstitution_pars"]["b1"], self["hiv_pars"]["cd4_reconstitution_pars"]["b2"]
+            cd4_change = b1*months_on_ART + b2*months_on_ART**2
             cd4_change[cd4_change < 0] = 0
             people.cd4[art_success_inds] += cd4_change
 

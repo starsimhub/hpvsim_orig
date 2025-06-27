@@ -1111,6 +1111,7 @@ class age_causal_infection(Analyzer):
         if self.start_year is None:
             self.start_year = sim['start']
         self.age_causal = []
+        self.age_cin = []
         self.age_cancer = []
         self.dwelltime = dict()
         for state in ['precin', 'cin', 'total']:
@@ -1127,6 +1128,7 @@ class age_causal_infection(Analyzer):
                 cin_time = (sim.t - date_cin) * sim['dt']
                 total_time = (sim.t - date_exposed) * sim['dt']
                 self.age_causal += (current_age - total_time).tolist()
+                self.age_cin += (current_age - cin_time).tolist()
                 self.age_cancer += current_age.tolist()
                 self.dwelltime['precin'] += hpv_time.tolist()
                 self.dwelltime['cin'] += cin_time.tolist()
