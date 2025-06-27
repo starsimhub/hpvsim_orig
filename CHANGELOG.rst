@@ -9,6 +9,12 @@ All notable changes to the codebase are documented in this file. Changes that ma
    :depth: 1
 
 
+Version 2.2.3 (2025-06-27)
+---------------------------
+- Small bugfixes and changes to HIV module parameterization
+- *Github info* PR `685 <https://github.com/starsimhub/hpvsim_orig/pull/685>`__
+
+
 Version 2.2.2 (2025-06-20)
 ---------------------------
 - Bugfix to allow running simulations beyond 2100
