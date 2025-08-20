@@ -730,7 +730,6 @@ class age_results(Analyzer):
         if attr == 'hpv': attr = 'infectious'  # People with HPV are referred to as infectious in the sim
         if attr == 'cancer': attr = 'cancerous'
         return attr
-        return attr
 
     def convert_rname_flows(self, rname):
         ''' Helper function for converting flow result names to people attributes '''
