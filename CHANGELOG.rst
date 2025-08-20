@@ -9,6 +9,12 @@ All notable changes to the codebase are documented in this file. Changes that ma
    :depth: 1
 
 
+Version 2.2.4 (2025-08-20)
+---------------------------
+- Fixes a bug in analyzer results for cancer by age and HIV status
+- *Github info* PR `687 <https://github.com/starsimhub/hpvsim_orig/pull/687>`__
+
+
 Version 2.2.3 (2025-06-27)
 ---------------------------
 - Small bugfixes and changes to HIV module parameterization
