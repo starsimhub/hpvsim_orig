@@ -1,6 +1,9 @@
 Human papillomavirus simulator (HPVsim)
 =======================================
 
+.. image:: https://badgen.net/pypi/v/hpvsim/?color=blue
+ :target: https://pypi.org/project/hpvsim
+
 .. image:: https://github.com/institutefordiseasemodeling/hpvsim/actions/workflows/tests.yaml/badge.svg
     :target: https://github.com/institutefordiseasemodeling/hpvsim/actions/workflows/tests.yaml
     :alt: pipeline status
