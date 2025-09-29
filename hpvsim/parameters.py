@@ -481,6 +481,17 @@ def get_cross_immunity(cross_imm_med=None, cross_imm_high=None, own_imm_hr=None,
             lr=cross_imm_med,
         ),
 
+        hr=dict(
+            hpv16=cross_imm_med,
+            hpv18=cross_imm_med,
+            hpv45=cross_imm_med,
+            hi5=cross_imm_med,
+            hi4=cross_imm_med,
+            ohr=cross_imm_med,
+            hr=own_imm_hr,
+            lr=cross_imm_med,
+        ),
+
         lr=dict(
             hpv16=cross_imm_med,
             hpv18=cross_imm_med,
