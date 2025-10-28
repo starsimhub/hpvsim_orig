@@ -390,8 +390,9 @@ class CampaignDelivery(Intervention):
         elif len(self.prob) == 1:
             self.prob = np.array([self.prob[0]] * len(self.timepoints))
         else:
-            errormsg = f'Length of years incompatible with length of probabilities: {len(self.years)} vs {len(self.prob)}'
-            raise ValueError(errormsg)
+            if len(self.prob) != len(self.years):
+                errormsg = f'Length of years incompatible with length of probabilities: {len(self.years)} vs {len(self.prob)}'
+                raise ValueError(errormsg)
 
         # Lastly, adjust the annual probability by the sim's timestep, if it's an annual probability
         if self.annual_prob: self.prob = 1-(1-self.prob)**sim['dt']

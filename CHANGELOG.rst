@@ -9,6 +9,12 @@ All notable changes to the codebase are documented in this file. Changes that ma
    :depth: 1
 
 
+Version 2.2.5 (2025-10-27)
+---------------------------
+- Small bugfix for campaign vaccination
+- *Github info* PR `689 <https://github.com/starsimhub/hpvsim_orig/pull/689>`__
+
+
 Version 2.2.4 (2025-08-20)
 ---------------------------
 - Fixes a bug in analyzer results for cancer by age and HIV status
