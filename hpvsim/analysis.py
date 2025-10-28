@@ -785,9 +785,9 @@ class age_results(Analyzer):
                 if rdict.result_type == 'flow':
                     if not rdict.by_genotype:  # Results across all genotypes
                         if rdict.by_hiv:
-                            if rdict.hiv_attr:
+                            if rdict.hiv_attr == 'with':
                                 inds = ((ppl[rdict.date_attr] == sim.t) * (ppl[rdict.attr]) * (ppl['hiv'])).nonzero()[-1]
-                            else:
+                            elif rdict.hiv_attr == 'no':
                                 inds = ((ppl[rdict.date_attr] == sim.t) * (ppl[rdict.attr]) * (~ppl['hiv'])).nonzero()[-1]
                         else:
                             inds = ((ppl[rdict.date_attr] == sim.t) * (ppl[rdict.attr])).nonzero()[-1]
