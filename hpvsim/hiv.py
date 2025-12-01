@@ -27,7 +27,7 @@ class HIVsim(hpb.ParsObj):
         # Define default parameters, can be overwritten by hiv_pars
         pars["hiv_pars"] = {
             "cd4states": ["lt200", "gt200"],  # code names for HIV states
-            "cd4statesfull": ["CD4<200", "200<CD4<500"],  # full names for HIV states
+            "cd4statesfull": ["CD4<200", "CD4>=200"],  # full names for HIV states
             "cd4_lb": [0, 200],  # Lower bound for CD4 states
             "cd4_ub": [200, 500],  # Lower bound for CD4 states
             "rel_sus": {  # Increased risk of acquiring HPV
@@ -61,7 +61,7 @@ class HIVsim(hpb.ParsObj):
         y = np.linspace(0, 1, 101)
         # Calculate the CD4 trajectory based on the parameters
         m, b = self["hiv_pars"]["cd4_pars"]["m"], self["hiv_pars"]["cd4_pars"]["b"]
-        cd4_decline = m + b* y  # CD4 decline trajectory
+        cd4_decline = (m + b* y) ** 2 # CD4 decline trajectory
         self.cd4_decline_diff = np.diff(cd4_decline)
         sim.pars["hiv_pars"]["mortality_rates"] = self.pars["mortality_rates"]
         return
@@ -298,10 +298,19 @@ class HIVsim(hpb.ParsObj):
 
             # Now take care of people successfully on ART (CD4 reconstitutes)
             mpy = 12
-            months_on_ART = (people.t - people.date_art[art_success_inds]) * mpy
+            # Include dt so elapsed months on ART is correct
+            months_on_ART = (people.t - people.date_art[art_success_inds]) * people.pars["dt"] * mpy
+            # Compute incremental change over this timestep: f(now) - f(prev)
+            dt_months = people.pars["dt"] * mpy
+            months_prev = np.maximum(months_on_ART - dt_months, 0)
             b1, b2 = self["hiv_pars"]["cd4_reconstitution_pars"]["b1"], self["hiv_pars"]["cd4_reconstitution_pars"]["b2"]
-            cd4_change = b1*months_on_ART + b2*months_on_ART**2
-            cd4_change[cd4_change < 0] = 0
+            f_now = b1*months_on_ART + b2*months_on_ART**2
+            f_prev = b1*months_prev + b2*months_prev**2
+            cd4_change = f_now - f_prev
+            # Apply constraints: no negatives, respect cap
+            cd4_cap = 1500
+            current_cd4 = people.cd4[art_success_inds]
+            cd4_change = np.clip(cd4_change, 0, cd4_cap - current_cd4)
             people.cd4[art_success_inds] += cd4_change
 
         return
