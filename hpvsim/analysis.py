@@ -799,7 +799,7 @@ class age_results(Analyzer):
 
                 # This section is completed for stocks
                 elif rdict.result_type == 'stock':
-
+                    
                     if not rdict.by_genotype:
                         if rdict.by_hiv:
                             if rdict.hiv_attr == 'with':
@@ -811,7 +811,7 @@ class age_results(Analyzer):
                             elif rdict.hiv_attr == 'ratio':
                                 hiv_inds = (ppl[rdict.attr].any(axis=0) * ppl['hiv']).nonzero()[-1]
                                 no_hiv_inds = (ppl[rdict.attr].any(axis=0) * ~ppl['hiv']).nonzero()[-1]
-                                self.results[rkey][date] = sc.safedivide(bin_ages(hiv_inds, bins), bin_ages(no_hiv_inds, bins))
+                                #self.results[rkey][date] = sc.safedivide(bin_ages(hiv_inds, bins), bin_ages(no_hiv_inds, bins))
                         elif isinstance(rdict.attr, list):
                             inds = (ppl[rdict.attr[0]].any(axis=0) + ppl[rdict.attr[1]].any(axis=0)).nonzero()[-1]
                             inds = np.unique(inds)
@@ -856,7 +856,24 @@ class age_results(Analyzer):
                             inds = sc.findinds(ppl.is_female_alive & ~ppl.cancerous.any(axis=0))
                         denom = bin_ages(inds, bins) / 1e5  # CIN and cancer are per 100,000 women
                     # if 'total' not in result and 'cancer' not in result: denom = denom[None, :] # THIS IS IT!!!!
-                    self.results[rkey][date] = self.results[rkey][date] / denom
+                    self.results[rkey][date] = sc.safedivide(self.results[rkey][date], denom)
+
+                    # After incidence calculations, compute HIV rate ratios if both strata exist
+                    try:
+                        # Only applicable to cancer incidence stratified by HIV
+                        if ('cancer_incidence_with_hiv' in self.results) and ('cancer_incidence_no_hiv' in self.results):
+                            if (date in self.results['cancer_incidence_with_hiv']) and (date in self.results['cancer_incidence_no_hiv']):
+                                inc_with = self.results['cancer_incidence_with_hiv'][date]
+                                inc_no = self.results['cancer_incidence_no_hiv'][date]
+                                # initialize storage for rate ratios
+                                if 'cancer_hiv_rate_ratios' not in self.results:
+                                    self.results['cancer_hiv_rate_ratios'] = {}
+                                    self.results['cancer_hiv_rate_ratios']['bins'] = bins
+                                # Compute and store ratio (with HIV divided by no HIV)
+                                self.results['cancer_hiv_rate_ratios'][date] = sc.safedivide(inc_with, inc_no)
+                    except Exception:
+                        #  if any shape/date mismatch occurs, skip silently
+                        pass
 
                 if 'mortality' in rkey:
                     # first need to find people who died of other causes today and add them back into denom
@@ -1206,4 +1223,3 @@ analyzer_map = {
     'age_causal_infection': age_causal_infection,
     'dalys': dalys,
 }
-
