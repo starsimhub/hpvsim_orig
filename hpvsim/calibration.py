@@ -89,8 +89,10 @@ class Calibration(sc.prettyobj):
         if keep_db   is None: keep_db   = False
         if storage   is None: storage   = f'sqlite:///{db_name}'
         if total_trials is not None: n_trials = int(np.ceil(total_trials/n_workers))
-        self.run_args   = sc.objdict(n_trials=int(n_trials), n_workers=int(n_workers), name=name, db_name=db_name,
-                                     keep_db=keep_db, storage=storage, rand_seed=rand_seed, sampler=sampler)
+        total_trials = int(n_trials * n_workers)
+        self.run_args   = sc.objdict(n_trials=int(n_trials), n_workers=int(n_workers), total_trials=total_trials,
+                                     name=name, db_name=db_name, keep_db=keep_db, storage=storage,
+                                     rand_seed=rand_seed, sampler=sampler)
 
         # Handle other inputs
         self.label          = label
@@ -459,7 +461,8 @@ class Calibration(sc.prettyobj):
             raise NotImplementedError('Implemented but does not work')
         else:
             sampler = None
-        output = op.create_study(storage=self.run_args.storage, study_name=self.run_args.name, sampler=sampler)
+        output = op.create_study(storage=self.run_args.storage, study_name=self.run_args.name, sampler=sampler,
+                                 load_if_exists=self.run_args.keep_db)
         return output
 
 
@@ -489,7 +492,23 @@ class Calibration(sc.prettyobj):
         # Run the optimization
         t0 = sc.tic()
         self.make_study()
-        self.run_workers()
+
+        # If resuming with keep_db, check for existing trials and only run the remainder
+        if self.run_args.keep_db:
+            study = op.load_study(storage=self.run_args.storage, study_name=self.run_args.name)
+            n_existing = len([t for t in study.trials if t.state == op.trial.TrialState.COMPLETE])
+            if n_existing > 0:
+                n_remaining = max(0, self.run_args.total_trials - n_existing)
+                if n_remaining == 0:
+                    print(f'Calibration already has {n_existing} completed trials, skipping workers')
+                else:
+                    self.run_args.n_trials = int(np.ceil(n_remaining / self.run_args.n_workers))
+                    print(f'Resuming calibration: {n_existing} trials complete, running ~{n_remaining} more')
+                    self.run_workers()
+            else:
+                self.run_workers()
+        else:
+            self.run_workers()
         study = op.load_study(storage=self.run_args.storage, study_name=self.run_args.name, sampler = self.run_args.sampler)
         self.best_pars = sc.objdict(study.best_params)
         self.elapsed = sc.toc(t0, output=True)
