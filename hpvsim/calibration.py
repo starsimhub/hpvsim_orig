@@ -523,6 +523,7 @@ class Calibration(sc.prettyobj):
         self.analyzer_results = []
         self.sim_results = []
         self.extra_sim_results = []
+        loaded_trials = set()
         if load:
             print('Loading saved results...')
             for trial in study.trials:
@@ -533,6 +534,7 @@ class Calibration(sc.prettyobj):
                     self.sim_results.append(results['sim'])
                     self.analyzer_results.append(results['analyzer'])
                     self.extra_sim_results.append(results['extra_sim_results'])
+                    loaded_trials.add(n)
                     if tidyup:
                         try:
                             os.remove(filename)
@@ -547,7 +549,7 @@ class Calibration(sc.prettyobj):
 
         # Compare the results
         self.initial_pars, self.par_bounds = self.sim_to_sample_pars()
-        self.parse_study(study)
+        self.parse_study(study, loaded_trials=loaded_trials)
 
         # Tidy up
         self.calibrated = True
@@ -557,7 +559,7 @@ class Calibration(sc.prettyobj):
         return self
 
 
-    def parse_study(self, study):
+    def parse_study(self, study, loaded_trials=None):
         '''Parse the study into a data frame -- called automatically '''
         best = study.best_params
         self.best_pars = best
@@ -571,6 +573,8 @@ class Calibration(sc.prettyobj):
             for key,val in trial.params.items():
                 data[key] = val
             if data['mismatch'] is None:
+                failed_trials.append(data['index'])
+            elif loaded_trials is not None and trial.number not in loaded_trials:
                 failed_trials.append(data['index'])
             else:
                 results.append(data)
@@ -676,7 +680,7 @@ class Calibration(sc.prettyobj):
 
         # determine how many results to plot
         if res_to_plot is not None:
-            index_to_plot = self.df.iloc[0:res_to_plot, 0].values
+            index_to_plot = self.df.index[0:res_to_plot].values
             analyzer_results = [analyzer_results[i] for i in index_to_plot]
             sim_results = [sim_results[i] for i in index_to_plot]
 
