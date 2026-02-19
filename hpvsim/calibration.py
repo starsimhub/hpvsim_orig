@@ -412,7 +412,11 @@ class Calibration(sc.prettyobj):
         else:
             op.logging.set_verbosity(op.logging.ERROR)
         study = op.load_study(storage=self.run_args.storage, study_name=self.run_args.name, sampler = self.run_args.sampler)
-        output = study.optimize(self.run_trial, n_trials=self.run_args.n_trials, callbacks=None)
+        try:
+            output = study.optimize(self.run_trial, n_trials=self.run_args.n_trials, callbacks=None)
+        except Exception as E:
+            print(f'Worker failed with error: {E}')
+            output = None
         return output
 
 
