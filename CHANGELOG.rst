@@ -9,6 +9,12 @@ All notable changes to the codebase are documented in this file. Changes that ma
    :depth: 1
 
 
+Version 2.2.6 (2026-03-24)
+---------------------------
+- Vaccine immunity is now sterilizing (all-or-nothing) rather than leaky (per-contact). ``imm_init`` sets the probability of sterilizing immunity; non-sterilizing recipients get leaky protection at the ``imm_init`` level. Default is 0.95.
+- Adds per-timestep transmission logging (``sim._transmission_log``) for downstream analysis of transmission chains.
+- *Regression information*: vaccine efficacy will differ from previous versions due to the immunity model change.
+
 Version 2.2.5 (2025-10-27)
 ---------------------------
 - Small bugfix for campaign vaccination
