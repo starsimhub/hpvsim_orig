@@ -1440,6 +1440,8 @@ class vx(Product):
                 elif imm_init.get('dist') == 'beta_mean':
                     self.imm_init = imm_init['par1']
                 else:
+                    # Estimate the mean of an unknown distribution via Monte Carlo;
+                    # 10k samples is just for accuracy, not related to agent count
                     self.imm_init = float(np.mean(hpu.sample(**imm_init, size=10000)))
             else:
                 self.imm_init = float(imm_init)
