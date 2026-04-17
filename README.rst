@@ -1,6 +1,11 @@
 Human papillomavirus simulator (HPVsim)
 =======================================
 
+**THIS REPOSITORY HAS MOVED!**
+
+This version is preserved solely for historical record. The new repository is available here: https://github.com/starsimhub/hpvsim
+
+
 .. image:: https://badgen.net/pypi/v/hpvsim/?color=blue
  :target: https://pypi.org/project/hpvsim
 
